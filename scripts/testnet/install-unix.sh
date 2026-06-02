@@ -44,7 +44,7 @@ else
   TMP="$(mktemp -d)"
   echo "Downloading $(basename "$URL")..."
   curl -fsSL "$URL" | tar -xz -C "$TMP"
-  find "$TMP" -type f \( -name bitcoind -o -name bitcoin-cli -o -name bitcoin-wallet \) -exec cp {} "$BIN_DIR/" \;
+  find "$TMP" -type f \( -name bitcoind -o -name bitcoin-cli \) -exec cp {} "$BIN_DIR/" \;
   chmod +x "${BIN_DIR}/"* 2>/dev/null || true
   rm -rf "$TMP"
   echo "Installed to ${BIN_DIR}"
