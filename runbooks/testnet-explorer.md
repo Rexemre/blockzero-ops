@@ -5,7 +5,7 @@ open-source [btc-rpc-explorer](https://github.com/janoside/btc-rpc-explorer)
 pointed at the VPS seed node's RPC. No custom code.
 
 - Host: IONOS VPS `217.160.46.61` (same box as the seed node).
-- Public URL: `https://explorer.marlonmorales.ch` (after DNS, see below).
+- Public URL: `https://explorer.bloz.org` (after DNS, see below).
 - App: Node.js, listens on `127.0.0.1:3002`, behind Caddy.
 
 ## Components on the VPS
@@ -53,8 +53,8 @@ systemctl enable --now blockzero-explorer
    systemctl restart caddy
    ```
 
-4. **DNS (one-time, IONOS):** add an A record
-   `explorer.marlonmorales.ch -> 217.160.46.61`.
+4. **DNS (one-time, IONOS):** in the `bloz.org` zone add an A record
+   `explorer -> 217.160.46.61` (i.e. `explorer.bloz.org`).
    Ports 80/443 are already open in the IONOS cloud firewall, so Caddy issues
    the TLS cert automatically on the first request.
 

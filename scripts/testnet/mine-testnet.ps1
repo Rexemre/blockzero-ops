@@ -32,21 +32,41 @@ function Find-Exe([string]$Name) {
 function Try-Invoke-Cli([string[]]$CliArgs) {
     $cli = Find-Exe "bitcoin-cli.exe"
     $prevEap = $ErrorActionPreference
-    $ErrorActionPreference = "SilentlyContinue"
+    # Use Continue (not SilentlyContinue) so stderr text from bitcoin-cli is
+    # preserved by the 2>&1 merge instead of being dropped. Disable native
+    # exit-code-to-exception coupling (PS 7.3+) so a non-zero exit doesn't throw
+    # before we can inspect it.
+    $ErrorActionPreference = "Continue"
+    $prevNative = $PSNativeCommandUseErrorActionPreference
+    $PSNativeCommandUseErrorActionPreference = $false
     $out = & $cli -testnet -datadir="$DataDir" -rpcport=18211 @CliArgs 2>&1
     $exit = $LASTEXITCODE
+    $PSNativeCommandUseErrorActionPreference = $prevNative
     $ErrorActionPreference = $prevEap
     $text = ($out | Out-String).Trim()
     return @{ Ok = ($exit -eq 0); Text = $text; Exit = $exit }
 }
 
+# Transient errors seen while bitcoind is starting up / warming up its indexes
+# and wallet subsystem. We retry these instead of failing the whole script.
+$script:TransientRpcPattern = 'Loading|warming up|Rewinding|Verifying|Activating|Rescanning|Could not connect|couldn''t connect|connection refused|code: -28|in warmup|loading wallet|Wallet loading'
+
 function Invoke-Cli([string[]]$CliArgs) {
-    $result = Try-Invoke-Cli @CliArgs
-    if (-not $result.Ok) {
-        $msg = if ($result.Text) { $result.Text } else { "bitcoin-cli failed (exit $($result.Exit))" }
+    $deadline = (Get-Date).AddSeconds(45)
+    while ($true) {
+        # Pass the array as a single argument (NOT splatted): splatting an array
+        # whose first element looks like "-rpcwallet=..." makes PowerShell treat
+        # it as a parameter name and silently drops the actual RPC command.
+        $result = Try-Invoke-Cli $CliArgs
+        if ($result.Ok) { return $result.Text }
+        $transient = (-not $result.Text) -or ($result.Text -match $script:TransientRpcPattern)
+        if ($transient -and (Get-Date) -lt $deadline) {
+            Start-Sleep -Seconds 2
+            continue
+        }
+        $msg = if ($result.Text) { $result.Text } else { "bitcoin-cli failed (exit $($result.Exit)) - node not ready" }
         throw $msg
     }
-    return $result.Text
 }
 
 function Write-DefaultConf([string]$Path) {
@@ -141,16 +161,41 @@ function Get-RewardSummary([string]$Name) {
     }
 }
 
+function Wait-ForRpc {
+    param([int]$TimeoutSec = 90)
+    $deadline = (Get-Date).AddSeconds($TimeoutSec)
+    while ((Get-Date) -lt $deadline) {
+        $r = Try-Invoke-Cli @("getblockcount")
+        if ($r.Ok) { return }
+        if ($r.Text -match "Loading|verifying|rescanning|warming up|Rewinding|init message") {
+            Write-Host "Node starting... ($($r.Text))"
+        }
+        Start-Sleep -Seconds 3
+    }
+    throw "bitcoind RPC did not become ready within ${TimeoutSec}s. Check the node (it may still be verifying blocks)."
+}
+
 function Wait-ForPublicChain {
     param([int]$TimeoutSec = 120)
     $deadline = (Get-Date).AddSeconds($TimeoutSec)
     while ((Get-Date) -lt $deadline) {
-        $peers = [int](Invoke-Cli @("getconnectioncount"))
-        $height = [int](Invoke-Cli @("getblockcount"))
+        $pc = Try-Invoke-Cli @("getconnectioncount")
+        $hc = Try-Invoke-Cli @("getblockcount")
+        if (-not $pc.Ok -or -not $hc.Ok) {
+            Start-Sleep -Seconds 3
+            continue
+        }
+        $peers = [int]$pc.Text
+        $height = [int]$hc.Text
         if ($peers -ge 1) {
             if ($height -ge 1) {
-                $b1 = Invoke-Cli @("getblockhash", "1")
-                if ($b1 -ne $OfficialBlock1) {
+                $bh = Try-Invoke-Cli @("getblockhash", "1")
+                if (-not $bh.Ok) {
+                    # node still warming up its block index; retry
+                    Start-Sleep -Seconds 3
+                    continue
+                }
+                if ($bh.Text -ne $OfficialBlock1) {
                     throw "Local block 1 is not the public testnet. Run .\resync-testnet.ps1 first."
                 }
             }
@@ -172,8 +217,21 @@ No connection to the public testnet (0 peers). Do NOT mine solo — that creates
 }
 
 if ($Stop) {
-    try { Invoke-Cli @("stop") | Out-Null; Write-Host "bitcoind stopped." }
-    catch { Write-Host "bitcoind was not running." }
+    try { Invoke-Cli @("stop") | Out-Null; Write-Host "Stopping bitcoind..." }
+    catch { Write-Host "bitcoind was not running (RPC)."; }
+    $procs = Get-Process bitcoind -ErrorAction SilentlyContinue
+    if ($procs) {
+        $deadline = (Get-Date).AddSeconds(90)
+        while ((Get-Process bitcoind -ErrorAction SilentlyContinue) -and (Get-Date) -lt $deadline) {
+            Start-Sleep -Seconds 2
+        }
+        $still = Get-Process bitcoind -ErrorAction SilentlyContinue
+        if ($still) {
+            Write-Host "Shutdown slow (RandomX) - forcing."
+            $still | Stop-Process -Force
+        }
+    }
+    Write-Host "bitcoind stopped."
     exit 0
 }
 
@@ -193,9 +251,10 @@ $running = Get-Process bitcoind -ErrorAction SilentlyContinue
 if (-not $running) {
     Write-Host "Starting bitcoind (native Windows, testnet)..."
     Start-Process -FilePath $daemon -ArgumentList "-testnet", "-datadir=$DataDir" -WindowStyle Hidden
-    Start-Sleep -Seconds 20
+    Start-Sleep -Seconds 5
 }
 
+Wait-ForRpc
 Wait-ForPublicChain
 
 Ensure-Wallet $WalletName
