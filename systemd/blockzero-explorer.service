@@ -1,0 +1,16 @@
+[Unit]
+Description=Block Zero testnet block explorer (btc-rpc-explorer)
+After=network-online.target blockzero-testnet.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/btc-rpc-explorer
+ExecStart=/usr/bin/node /opt/btc-rpc-explorer/bin/cli.js
+Restart=always
+RestartSec=10
+EnvironmentFile=/opt/btc-rpc-explorer/.env
+
+[Install]
+WantedBy=multi-user.target
