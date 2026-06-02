@@ -31,7 +31,16 @@ function Find-Exe([string]$Name) {
 
 function Invoke-Cli([string[]]$CliArgs) {
     $cli = Find-Exe "bitcoin-cli.exe"
-    & $cli -testnet -datadir="$DataDir" -rpcport=18211 @CliArgs
+    $prevEap = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    $out = & $cli -testnet -datadir="$DataDir" -rpcport=18211 @CliArgs 2>&1
+    $exit = $LASTEXITCODE
+    $ErrorActionPreference = $prevEap
+    $text = ($out | Out-String).Trim()
+    if ($exit -ne 0) {
+        throw $text
+    }
+    return $text
 }
 
 function Write-DefaultConf([string]$Path) {
@@ -107,26 +116,53 @@ if (-not $running) {
 Wait-ForPublicChain
 
 function Ensure-Wallet([string]$Name) {
-    $wallets = Invoke-Cli @("listwallets") | ConvertFrom-Json
+    $wallets = @(Invoke-Cli @("listwallets") | ConvertFrom-Json)
     if ($wallets -contains $Name) { return }
     try {
         Invoke-Cli @("loadwallet", $Name) | Out-Null
     } catch {
-        try {
-            Invoke-Cli @("createwallet", $Name) | Out-Null
-            Write-Host "Created wallet '$Name'."
-        } catch {
-            Write-Host "Wallet '$Name' already loaded or in use."
-        }
+        Invoke-Cli @("createwallet", $Name) | Out-Null
+        Write-Host "Created wallet '$Name'."
     }
 }
 
-function Get-MiningAddresses([string]$Name) {
-    $received = Invoke-Cli @("-rpcwallet=$Name", "listreceivedbyaddress", "0", "true", "true") | ConvertFrom-Json
-    if ($received.Count -gt 0) {
-        return @($received | ForEach-Object { $_.address })
+function Get-MiningAddressFile() {
+    return Join-Path $DataDir "mining-address.txt"
+}
+
+function Get-OrCreate-MiningAddress([string]$Name) {
+    $addrFile = Get-MiningAddressFile
+    if (Test-Path $addrFile) {
+        $saved = (Get-Content $addrFile -Raw).Trim()
+        if ($saved) {
+            try {
+                Invoke-Cli @("-rpcwallet=$Name", "getaddressinfo", $saved) | Out-Null
+                return $saved
+            } catch {}
+        }
     }
-    return @()
+    $coins = @(Invoke-Cli @("-rpcwallet=$Name", "listunspent", "0", "9999999") | ConvertFrom-Json)
+    $recent = $coins | Where-Object { $_.confirmations -lt 100 -and $_.confirmations -ge 0 } |
+        Sort-Object -Property confirmations -Descending |
+        Select-Object -First 1
+    if ($recent) {
+        $addr = $recent.address
+        Set-Content -Path $addrFile -Value $addr -NoNewline -Encoding ASCII
+        return $addr
+    }
+    $addr = Invoke-Cli @("-rpcwallet=$Name", "getnewaddress")
+    Set-Content -Path $addrFile -Value $addr.Trim() -NoNewline -Encoding ASCII
+    return $addr.Trim()
+}
+
+function Get-RewardSummary([string]$Name) {
+    $coins = @(Invoke-Cli @("-rpcwallet=$Name", "listunspent", "0", "9999999") | ConvertFrom-Json)
+    $immature = @($coins | Where-Object { $_.confirmations -lt 100 -and $_.confirmations -ge 0 })
+    $byAddr = $immature | Group-Object address
+    return @{
+        BlockCount = $immature.Count
+        Addresses  = @($byAddr | ForEach-Object { $_.Name })
+    }
 }
 
 Ensure-Wallet $WalletName
@@ -136,13 +172,21 @@ $peers = Invoke-Cli @("getconnectioncount")
 
 if ($Status) {
     $bal = Invoke-Cli @("-rpcwallet=$WalletName", "getbalances") | ConvertFrom-Json
-    $addrs = Get-MiningAddresses $WalletName
+    $rewards = Get-RewardSummary $WalletName
+    $addrFile = Get-MiningAddressFile
+    $activeAddr = if (Test-Path $addrFile) { (Get-Content $addrFile -Raw).Trim() } else { "" }
+    if (-not $activeAddr -and $rewards.BlockCount -gt 0) {
+        $activeAddr = ($rewards.Addresses | Select-Object -Last 1)
+    }
     Write-Host "Peers: $peers"
     Write-Host "Height: $height"
-    if ($addrs.Count -gt 0) {
-        Write-Host "Mining address(es): $($addrs -join ', ')"
+    if ($activeAddr) {
+        Write-Host "Mining address: $activeAddr"
     } else {
-        Write-Host "Mining address: (none with rewards yet)"
+        Write-Host "Mining address: (not set yet - run .\mine-testnet.ps1 once)"
+    }
+    if ($rewards.BlockCount -gt 0) {
+        Write-Host "Blocks mined (immature): $($rewards.BlockCount)"
     }
     Write-Host "Immature TBLOZ: $($bal.mine.immature)"
     Write-Host "Trusted TBLOZ: $($bal.mine.trusted)"
@@ -152,7 +196,7 @@ if ($Status) {
     exit 0
 }
 
-$addr = Invoke-Cli @("-rpcwallet=$WalletName", "getnewaddress")
+$addr = Get-OrCreate-MiningAddress $WalletName
 
 Write-Host "Peers: $peers | Chain height: $height"
 Write-Host "Mining to: $addr"
