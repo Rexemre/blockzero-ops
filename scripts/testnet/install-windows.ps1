@@ -69,9 +69,7 @@ if ((Test-Path (Join-Path $BinDir "bitcoind.exe")) -and (Test-Path (Join-Path $B
     }
 }
 
-$confDir = Join-Path $InstallDir "testnet3"
-New-Item -ItemType Directory -Force -Path $confDir | Out-Null
-$conf = Join-Path $confDir "bitcoin.conf"
+$conf = Join-Path $InstallDir "bitcoin.conf"
 if (-not (Test-Path $conf)) {
     Copy-Item (Join-Path $PSScriptRoot "bitcoin.conf.example") $conf
 }

@@ -8,7 +8,7 @@
 
 param(
     [string]$BinDir = "",
-    [string]$DataDir = "$env:LOCALAPPDATA\BlockZero\testnet3",
+    [string]$DataDir = "$env:LOCALAPPDATA\BlockZero",
     [string]$WalletName = "mining",
     [int]$MaxTries = 500000000,
     [switch]$Status,
@@ -27,9 +27,9 @@ function Find-Exe([string]$Name) {
     throw "Cannot find $Name. Set -BinDir or add Block Zero bin to PATH. See quickstart-mining.md"
 }
 
-function Invoke-Cli([string[]]$Args) {
+function Invoke-Cli([string[]]$CliArgs) {
     $cli = Find-Exe "bitcoin-cli.exe"
-    & $cli -testnet -datadir="$DataDir" -rpcport=18211 @Args
+    & $cli -testnet -datadir="$DataDir" -rpcport=18211 @CliArgs
 }
 
 if ($Stop) {
@@ -44,13 +44,18 @@ if (-not (Test-Path $DataDir)) {
 
 $conf = Join-Path $DataDir "bitcoin.conf"
 if (-not (Test-Path $conf)) {
-    $example = Join-Path $PSScriptRoot "bitcoin.conf.example"
-    if (Test-Path $example) {
-        Copy-Item $example $conf
-        Write-Host "Created $conf from example."
-    } else {
-        throw "Missing bitcoin.conf in $DataDir"
-    }
+    @"
+server=1
+txindex=1
+
+[test]
+listen=0
+rpcbind=127.0.0.1
+rpcallowip=127.0.0.1
+rpcport=18211
+addnode=217.160.46.61:18210
+"@ | Set-Content -Path $conf -Encoding UTF8
+    Write-Host "Created $conf"
 }
 
 $daemon = Find-Exe "bitcoind.exe"
@@ -58,8 +63,8 @@ $running = Get-Process bitcoind -ErrorAction SilentlyContinue
 
 if (-not $running) {
     Write-Host "Starting bitcoind (native Windows, testnet)..."
-    & $daemon -testnet -datadir="$DataDir" -daemon
-    Start-Sleep -Seconds 6
+    Start-Process -FilePath $daemon -ArgumentList "-testnet", "-datadir=$DataDir" -WindowStyle Hidden
+    Start-Sleep -Seconds 20
 }
 
 try { Invoke-Cli @("loadwallet", $WalletName) 2>$null | Out-Null } catch {}

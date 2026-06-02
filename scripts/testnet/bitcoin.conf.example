@@ -1,13 +1,13 @@
 # Block Zero testnet — copy to your datadir as bitcoin.conf
-# Windows default: %LOCALAPPDATA%\BlockZero\testnet3\bitcoin.conf
-# Linux/macOS default: ~/.blockzero/testnet3/bitcoin.conf
+# Windows default: %LOCALAPPDATA%\BlockZero\bitcoin.conf
+# (with -testnet, chain data goes in ...\BlockZero\testnet3\)
 
 server=1
-listen=1
 txindex=1
 
 [test]
-bind=0.0.0.0:18210
+# listen=0 = outbound-only (good for Windows miners; avoids port 18210 conflicts with WSL)
+listen=0
 rpcbind=127.0.0.1
 rpcallowip=127.0.0.1
 rpcport=18211
