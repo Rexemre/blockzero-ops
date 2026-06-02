@@ -80,7 +80,6 @@ rpcbind=127.0.0.1
 rpcallowip=127.0.0.1
 rpcport=18211
 addnode=217.160.46.61:18210
-addnode=127.0.0.1:18210
 "@ | Set-Content -Path $Path -Encoding UTF8
 }
 
