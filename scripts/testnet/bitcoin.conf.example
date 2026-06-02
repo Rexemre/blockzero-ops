@@ -1,0 +1,14 @@
+# Block Zero testnet — copy to your datadir as bitcoin.conf
+# Windows default: %LOCALAPPDATA%\BlockZero\testnet3\bitcoin.conf
+# Linux/macOS default: ~/.blockzero/testnet3/bitcoin.conf
+
+server=1
+listen=1
+txindex=1
+
+[test]
+bind=0.0.0.0:18210
+rpcbind=127.0.0.1
+rpcallowip=127.0.0.1
+rpcport=18211
+addnode=217.160.46.61:18210
