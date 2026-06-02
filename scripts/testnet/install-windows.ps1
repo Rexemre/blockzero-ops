@@ -46,9 +46,12 @@ if ((Test-Path (Join-Path $BinDir "bitcoind.exe")) -and (Test-Path (Join-Path $B
         Expand-Archive -Path $zip -DestinationPath $InstallDir -Force
         Remove-Item $zip -Force
         # Release zips use a top-level folder like blockzero-*-windows-x64/
-        Get-ChildItem $InstallDir -Directory | ForEach-Object {
-            Get-ChildItem $_.FullName -Filter "*.exe" -ErrorAction SilentlyContinue | ForEach-Object {
-                Copy-Item $_.FullName $BinDir -Force
+        Get-ChildItem $InstallDir -Directory -Filter "blockzero-*-windows-x64" | ForEach-Object {
+            $srcBin = Join-Path $_.FullName "bin"
+            if (Test-Path $srcBin) {
+                Get-ChildItem $srcBin -Filter "*.exe" | ForEach-Object {
+                    Copy-Item $_.FullName $BinDir -Force
+                }
             }
         }
         Write-Host "Installed to $BinDir"
@@ -75,7 +78,7 @@ if (-not (Test-Path $conf)) {
 
 Write-Host ""
 Write-Host "Done. Add to PATH for this session:"
-Write-Host "  `$env:Path += `";$BinDir`""
+Write-Host ('  $env:Path += "' + $BinDir + '"')
 Write-Host ""
 Write-Host "Start mining:"
-Write-Host "  .\mine-testnet.ps1 -BinDir `"$BinDir`""
+Write-Host ('  .\mine-testnet.ps1 -BinDir "' + $BinDir + '"')
