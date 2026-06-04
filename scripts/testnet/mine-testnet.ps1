@@ -9,10 +9,9 @@ param(
     [string]$BinDir = "",
     [string]$DataDir = "$env:LOCALAPPDATA\BlockZero",
     [string]$WalletName = "mining",
-    # Tries per generatetoaddress call. Kept small on purpose: each call must be
-    # short so the loop regains control quickly and Ctrl+C leaves bitcoind idle
-    # (a huge value makes one uninterruptible call peg the CPU for a long time).
-    [int]$MaxTries = 500000,
+    # Match mine-testnet.sh / mining-guide.md (500M). Lower values cause short bursts
+    # with idle gaps between RPC calls - Task Manager then shows 0% most of the time.
+    [long]$MaxTries = 500000000,
     [switch]$Status,
     [switch]$Stop
 )
@@ -107,6 +106,22 @@ function Ensure-Wallet([string]$Name) {
     if ($load.Text -match "already loaded|error code: -35") { return }
 
     if (Test-WalletOnDisk $Name) {
+        if ($load.Text -match "walletcrosschain|reused across chains") {
+            $paths = @(
+                (Join-Path $DataDir "testnet3\wallets\$Name")
+                (Join-Path $DataDir "testnet3\$Name")
+            )
+            $walletPath = $paths | Where-Object { Test-Path $_ } | Select-Object -First 1
+            if ($walletPath) {
+                $archived = "$walletPath-old-chain-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+                Write-Host "Archiving wallet from the previous testnet chain: $archived"
+                Rename-Item $walletPath $archived -Force
+                Remove-Item (Get-MiningAddressFile) -Force -ErrorAction SilentlyContinue
+                Invoke-Cli @("createwallet", $Name) | Out-Null
+                Write-Host "Created fresh wallet '$Name' for the current testnet."
+                return
+            }
+        }
         throw @"
 Wallet '$Name' exists on disk but could not be loaded.
 
@@ -222,10 +237,10 @@ No connection to the public testnet (0 peers). Do NOT mine solo - that creates a
 }
 
 if ($Stop) {
-    try { Invoke-Cli @("stop") | Out-Null; Write-Host "Stopping bitcoind..." }
-    catch { Write-Host "bitcoind was not running (RPC)."; }
     $procs = Get-Process bitcoind -ErrorAction SilentlyContinue
     if ($procs) {
+        try { Invoke-Cli @("stop") | Out-Null; Write-Host "Stopping bitcoind..." }
+        catch { Write-Host "RPC stop failed - forcing shutdown..." }
         $deadline = (Get-Date).AddSeconds(90)
         while ((Get-Process bitcoind -ErrorAction SilentlyContinue) -and (Get-Date) -lt $deadline) {
             Start-Sleep -Seconds 2
@@ -235,6 +250,8 @@ if ($Stop) {
             Write-Host "Shutdown slow (RandomX) - forcing."
             $still | Stop-Process -Force
         }
+    } else {
+        Write-Host "bitcoind was not running."
     }
     Write-Host "bitcoind stopped."
     exit 0

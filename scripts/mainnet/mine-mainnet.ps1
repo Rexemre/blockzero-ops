@@ -12,7 +12,7 @@ param(
     [string]$BinDir = "",
     [string]$DataDir = "$env:LOCALAPPDATA\BlockZeroMainnet",
     [string]$WalletName = "mining",
-    [int]$MaxTries = 500000,
+    [long]$MaxTries = 500000000,
     [switch]$Status,
     [switch]$Stop
 )

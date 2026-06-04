@@ -10,12 +10,32 @@
 param(
     [string]$Version = "latest",
     [string]$InstallDir = "$env:LOCALAPPDATA\BlockZero",
-    [string]$Repo = "Rexemre/blockzero-core"
+    [string]$Repo = "Rexemre/blockzero-core",
+    [switch]$Force
 )
 
 $ErrorActionPreference = "Stop"
 $BinDir = Join-Path $InstallDir "bin"
 New-Item -ItemType Directory -Force -Path $BinDir | Out-Null
+
+function Stop-BitcoindIfRunning {
+    $procs = Get-Process bitcoind -ErrorAction SilentlyContinue
+    if (-not $procs) { return }
+    Write-Host "Stopping running bitcoind (required before updating binaries)..."
+    $cli = Join-Path $BinDir "bitcoin-cli.exe"
+    if (Test-Path $cli) {
+        try { & $cli -testnet -datadir="$InstallDir" -rpcport=18211 stop | Out-Null } catch {}
+        Start-Sleep -Seconds 5
+    }
+    Get-Process bitcoind -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+    $deadline = (Get-Date).AddSeconds(30)
+    while ((Get-Process bitcoind -ErrorAction SilentlyContinue) -and (Get-Date) -lt $deadline) {
+        Start-Sleep -Seconds 2
+    }
+    if (Get-Process bitcoind -ErrorAction SilentlyContinue) {
+        throw "bitcoind is still running. Close it manually, then re-run this script."
+    }
+}
 
 function Get-ReleaseAssetUrl {
     param([string]$Ver)
@@ -39,9 +59,11 @@ Write-Host "Block Zero Windows installer"
 Write-Host "Install dir: $InstallDir"
 Write-Host ""
 
-if ((Test-Path (Join-Path $BinDir "bitcoind.exe")) -and (Test-Path (Join-Path $BinDir "bitcoin-cli.exe"))) {
+if ((Test-Path (Join-Path $BinDir "bitcoind.exe")) -and (Test-Path (Join-Path $BinDir "bitcoin-cli.exe")) -and -not $Force) {
     Write-Host "Binaries already present in $BinDir"
+    Write-Host "Use -Force to re-download and replace them."
 } else {
+    Stop-BitcoindIfRunning
     try {
         $info = Get-ReleaseAssetUrl -Ver $Version
         Write-Host "Downloading $($info.Name) ($($info.Tag))..."
@@ -62,8 +84,12 @@ if ((Test-Path (Join-Path $BinDir "bitcoind.exe")) -and (Test-Path (Join-Path $B
         Write-Host "Installed to $BinDir"
     } catch {
         Write-Host ""
-        Write-Host "No prebuilt release available yet."
-        Write-Host "Build natively on Windows (recommended for mining speed):"
+        Write-Host "Install failed: $($_.Exception.Message)"
+        Write-Host ""
+        Write-Host "If bitcoind.exe is locked, stop it first:"
+        Write-Host "  .\mine-testnet.ps1 -Stop"
+        Write-Host ""
+        Write-Host "Or build natively on Windows (recommended for mining speed):"
         Write-Host "  1. Install Visual Studio 2022+ with C++ desktop workload"
         Write-Host "  2. git clone --recurse-submodules https://github.com/$Repo"
         Write-Host "  3. See blockzero-core/doc/build-windows-msvc.md"
