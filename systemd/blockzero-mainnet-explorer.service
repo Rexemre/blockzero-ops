@@ -1,0 +1,16 @@
+[Unit]
+Description=Block Zero mainnet block explorer (btc-rpc-explorer)
+After=network-online.target blockzero-mainnet.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/btc-rpc-explorer-mainnet
+ExecStart=/usr/bin/node /opt/btc-rpc-explorer-mainnet/bin/cli.js
+Restart=always
+RestartSec=10
+EnvironmentFile=/opt/btc-rpc-explorer-mainnet/.env
+
+[Install]
+WantedBy=multi-user.target

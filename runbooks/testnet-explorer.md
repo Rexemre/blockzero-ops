@@ -5,7 +5,7 @@ open-source [btc-rpc-explorer](https://github.com/janoside/btc-rpc-explorer)
 pointed at the VPS seed node's RPC. No custom code.
 
 - Host: IONOS VPS `217.160.46.61` (same box as the seed node).
-- Public URL: `https://explorer.bloz.org` (after DNS, see below).
+- Public URL: `https://texplorer.bloz.org` (after DNS, see below).
 - App: Node.js, listens on `127.0.0.1:3002`, behind Caddy.
 
 ## Components on the VPS
@@ -38,13 +38,13 @@ systemctl enable --now blockzero-explorer
 
    ```bash
    ln -sf /opt/sites/blockzero-explorer/Caddyfile.snippet \
-          /etc/caddy/sites/blockzero-explorer.caddy
+          /etc/caddy/sites/blockzero-testnet-explorer.caddy
    ```
 
 2. Pre-create the log file (Caddy runs as the `caddy` user):
 
    ```bash
-   install -o caddy -g caddy -m 644 /dev/null /var/log/caddy/blockzero-explorer.log
+   install -o caddy -g caddy -m 644 /dev/null /var/log/caddy/blockzero-testnet-explorer.log
    ```
 
 3. The Caddyfile has `admin off`, so **restart** (not reload):
@@ -54,7 +54,8 @@ systemctl enable --now blockzero-explorer
    ```
 
 4. **DNS (one-time, IONOS):** in the `bloz.org` zone add an A record
-   `explorer -> 217.160.46.61` (i.e. `explorer.bloz.org`).
+   `texplorer -> 217.160.46.61` (i.e. `texplorer.bloz.org`).
+   Mainnet explorer uses `explorer.bloz.org` (see `mainnet-explorer.md`).
    Ports 80/443 are already open in the IONOS cloud firewall, so Caddy issues
    the TLS cert automatically on the first request.
 
@@ -77,7 +78,7 @@ and several Pug views so the UI reads **Block Zero** / **TBLOZ** instead of
 Re-run it after every `git pull` of the explorer, then restart:
 
 ```bash
-python3 /opt/btc-rpc-explorer/explorer-branding.py
+python3 /opt/blockzero-ops/scripts/explorer-branding.py testnet
 systemctl restart blockzero-explorer
 ```
 
