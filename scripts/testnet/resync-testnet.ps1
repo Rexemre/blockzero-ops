@@ -36,8 +36,13 @@ if (Get-Process bitcoind -ErrorAction SilentlyContinue) {
 
 $chainDir = Join-Path $DataDir "testnet3"
 Write-Host "Removing local chain data (wallet is kept)..."
+# Wipe blocks, chainstate AND the txindex - a stale txindex points at the old
+# chain's best block and makes bitcoind exit with "best block of txindex not found".
 Remove-Item -Recurse -Force (Join-Path $chainDir "blocks") -ErrorAction SilentlyContinue
 Remove-Item -Recurse -Force (Join-Path $chainDir "chainstate") -ErrorAction SilentlyContinue
+Remove-Item -Recurse -Force (Join-Path $chainDir "indexes") -ErrorAction SilentlyContinue
+Remove-Item -Force (Join-Path $chainDir "peers.dat") -ErrorAction SilentlyContinue
+Remove-Item -Force (Join-Path $chainDir "mempool.dat") -ErrorAction SilentlyContinue
 
 @"
 server=1
