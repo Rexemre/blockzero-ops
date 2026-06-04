@@ -24,7 +24,11 @@ function Get-ReleaseAssetUrl {
     } else {
         $rel = Invoke-RestMethod "https://api.github.com/repos/$Repo/releases/tags/$Ver"
     }
-    $asset = $rel.assets | Where-Object { $_.name -match "windows.*x64.*\.zip" } | Select-Object -First 1
+    # Prefer the full GUI zip (includes bitcoin-qt); fall back to the fast
+    # CLI-only zip, which builds much sooner and is enough for mining.
+    $zips = $rel.assets | Where-Object { $_.name -match "windows-x64.*\.zip$" }
+    $asset = ($zips | Where-Object { $_.name -notmatch "-cli\.zip$" } | Select-Object -First 1)
+    if (-not $asset) { $asset = ($zips | Select-Object -First 1) }
     if (-not $asset) {
         throw "No windows-x64 release zip found. Tag a release first (see blockzero-core/.github/workflows/release.yml)."
     }
@@ -45,8 +49,9 @@ if ((Test-Path (Join-Path $BinDir "bitcoind.exe")) -and (Test-Path (Join-Path $B
         Invoke-WebRequest -Uri $info.Url -OutFile $zip -UseBasicParsing
         Expand-Archive -Path $zip -DestinationPath $InstallDir -Force
         Remove-Item $zip -Force
-        # Release zips use a top-level folder like blockzero-*-windows-x64/
-        Get-ChildItem $InstallDir -Directory -Filter "blockzero-*-windows-x64" | ForEach-Object {
+        # Release zips use a top-level folder like blockzero-*-windows-x64/ or
+        # blockzero-*-windows-x64-cli/ (the fast CLI-only build).
+        Get-ChildItem $InstallDir -Directory -Filter "blockzero-*-windows-x64*" | ForEach-Object {
             $srcBin = Join-Path $_.FullName "bin"
             if (Test-Path $srcBin) {
                 Get-ChildItem $srcBin -Filter "*.exe" | ForEach-Object {
