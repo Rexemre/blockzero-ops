@@ -1,0 +1,15 @@
+[Unit]
+Description=Block Zero mainnet seed node
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/opt/blockzero-core/build/bin/bitcoind -datadir=/opt/bzero-mainnet -printtoconsole
+Restart=always
+RestartSec=10
+TimeoutStopSec=120
+
+[Install]
+WantedBy=multi-user.target

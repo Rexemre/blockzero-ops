@@ -1,0 +1,12 @@
+# Block Zero MAINNET - copy to %LOCALAPPDATA%\BlockZeroMainnet\bitcoin.conf (Windows)
+# or ~/.blockzero-mainnet/bitcoin.conf (Linux/macOS). Chain data lives in the datadir root.
+
+server=1
+txindex=1
+
+[main]
+listen=1
+rpcbind=127.0.0.1
+rpcallowip=127.0.0.1
+rpcport=8211
+addnode=217.160.46.61:8210
