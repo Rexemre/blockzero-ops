@@ -5,7 +5,7 @@
 #   ./mine-testnet.sh status
 #   ./mine-testnet.sh stop
 #
-# Env: BZERO_BINDIR, BZERO_DATADIR, BZERO_WALLET, BZERO_MAXTRIES
+# Env: BZERO_BINDIR, BZERO_DATADIR, BZERO_WALLET, BZERO_MAXTRIES, BZERO_THREADS
 
 set -euo pipefail
 
@@ -13,6 +13,7 @@ BINDIR="${BZERO_BINDIR:-}"
 DATADIR="${BZERO_DATADIR:-${HOME}/.blockzero}"
 WALLET="${BZERO_WALLET:-mining}"
 MAXTRIES="${BZERO_MAXTRIES:-500000000}"
+THREADS="${BZERO_THREADS:-0}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 find_bin() {
@@ -70,14 +71,22 @@ if [[ "${1:-}" == "status" ]]; then
 fi
 
 echo "Chain height: $HEIGHT"
-echo "Mining to: $ADDR"
+if [[ "$THREADS" -gt 0 ]]; then
+  echo "Mining to: $ADDR | RandomX threads: $THREADS"
+else
+  echo "Mining to: $ADDR | RandomX threads: auto (min(cores, 16))"
+fi
 echo "Ctrl+C stops mining; bitcoind keeps running. Use: $0 stop"
 echo ""
 
 while true; do
   HEIGHT="$(cli getblockcount)"
   echo "$(date +%H:%M:%S) height=${HEIGHT} mining..."
-  RESULT="$(cli -rpcwallet="$WALLET" generatetoaddress 1 "$ADDR" "$MAXTRIES" 2>&1)" || true
+  if [[ "$THREADS" -gt 0 ]]; then
+    RESULT="$(cli -rpcwallet="$WALLET" generatetoaddress 1 "$ADDR" "$MAXTRIES" "$THREADS" 2>&1)" || true
+  else
+    RESULT="$(cli -rpcwallet="$WALLET" generatetoaddress 1 "$ADDR" "$MAXTRIES" 2>&1)" || true
+  fi
   echo "$RESULT"
   if echo "$RESULT" | grep -qE '[0-9a-f]{64}'; then
     cli -rpcwallet="$WALLET" getbalances

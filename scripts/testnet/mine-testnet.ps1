@@ -1,6 +1,7 @@
 # Block Zero testnet miner (Windows, native binaries - NOT WSL)
 # Usage:
 #   .\mine-testnet.ps1              # sync check + mine on public testnet
+#   .\mine-testnet.ps1 -Threads 8   # mine with 8 RandomX threads (default: auto, max 16)
 #   .\mine-testnet.ps1 -Status      # show height, peers, balance
 #   .\mine-testnet.ps1 -Stop        # stop bitcoind
 #   .\resync-testnet.ps1            # reset fork and re-sync (run this first if solo-mined)
@@ -12,6 +13,7 @@ param(
     # Match mine-testnet.sh / mining-guide.md (500M). Lower values cause short bursts
     # with idle gaps between RPC calls - Task Manager then shows 0% most of the time.
     [long]$MaxTries = 500000000,
+    [int]$Threads = 0,
     [switch]$Status,
     [switch]$Stop
 )
@@ -19,6 +21,19 @@ param(
 . "$PSScriptRoot\chain-identity.ps1"
 
 $ErrorActionPreference = "Stop"
+
+function Get-GenerateToAddressArgs([string]$Name, [string]$Addr) {
+    $args = @("-rpcwallet=$Name", "generatetoaddress", "1", $Addr, "$MaxTries")
+    if ($Threads -gt 0) { $args += "$Threads" }
+    return $args
+}
+
+function Get-MiningThreadsLabel() {
+    if ($Threads -gt 0) { return "$Threads (explicit)" }
+    $cores = [Environment]::ProcessorCount
+    $auto = [Math]::Min(16, $cores)
+    return "$auto auto (min(cores, 16))"
+}
 
 function Find-Exe([string]$Name) {
     if ($BinDir) {
@@ -322,7 +337,7 @@ function Ensure-NodeUp {
 $addr = Get-OrCreate-MiningAddress $WalletName
 
 Write-Host "Peers: $peers | Chain height: $height"
-Write-Host "Mining to: $addr"
+Write-Host "Mining to: $addr | RandomX threads: $(Get-MiningThreadsLabel)"
 $startBal = Invoke-Cli @("-rpcwallet=$WalletName", "getbalances") | ConvertFrom-Json
 Write-Host "Balance: $(Format-WalletBalance $startBal)"
 Write-Host "Press Ctrl+C to stop mining (node keeps running). Use -Stop to shut down bitcoind."
@@ -335,7 +350,7 @@ while ($true) {
         Ensure-NodeUp
         $height = [int](Invoke-Cli @("getblockcount"))
         Write-Host "$(Get-Date -Format 'HH:mm:ss') height=$height mining..."
-        $result = Invoke-Cli @("-rpcwallet=$WalletName", "generatetoaddress", "1", $addr, "$MaxTries")
+        $result = Invoke-Cli (Get-GenerateToAddressArgs $WalletName $addr)
         if ($result -match '[0-9a-f]{64}') {
             Write-Host "Block found: $result"
             $bal = Invoke-Cli @("-rpcwallet=$WalletName", "getbalances") | ConvertFrom-Json
