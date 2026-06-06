@@ -89,7 +89,7 @@ rpcbind=127.0.0.1
 rpcallowip=127.0.0.1
 rpcport=$RpcPort
 addnode=$SeedNode
-"@ | Set-Content -Path $Path -Encoding UTF8
+"@ | Set-Content -Path $Path -Encoding ASCII
 }
 
 function Test-WalletOnDisk([string]$Name) {
@@ -164,7 +164,9 @@ function Format-WalletBalance([object]$Bal) {
 }
 
 function Wait-ForRpc {
-    param([int]$TimeoutSec = 90)
+    # 180s: a previous bitcoind can hold the datadir lock for ~90s during the
+    # slow RandomX shutdown, so a fresh start may need to wait that out first.
+    param([int]$TimeoutSec = 180)
     $deadline = (Get-Date).AddSeconds($TimeoutSec)
     while ((Get-Date) -lt $deadline) {
         $r = Try-Invoke-Cli @("getblockcount")

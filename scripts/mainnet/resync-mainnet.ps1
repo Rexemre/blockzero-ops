@@ -51,7 +51,7 @@ rpcbind=127.0.0.1
 rpcallowip=127.0.0.1
 rpcport=$RpcPort
 addnode=$SeedNode
-"@ | Set-Content -Path (Join-Path $DataDir "bitcoin.conf") -Encoding UTF8
+"@ | Set-Content -Path (Join-Path $DataDir "bitcoin.conf") -Encoding ASCII
 
 Write-Host "Starting bitcoind..."
 Start-Process -FilePath $daemon -ArgumentList "-datadir=$DataDir" -WindowStyle Hidden

@@ -8,5 +8,7 @@ txindex=1
 listen=1
 rpcbind=127.0.0.1
 rpcallowip=127.0.0.1
-rpcport=8211
+# Local-only RPC. 8332 avoids the Hyper-V/WSL reserved-port range that blocks
+# 8211 on some Windows hosts (error 10013). Change freely; it is not networked.
+rpcport=8332
 addnode=217.160.46.61:8210
