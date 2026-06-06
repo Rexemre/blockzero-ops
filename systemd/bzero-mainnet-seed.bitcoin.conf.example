@@ -1,0 +1,13 @@
+# Block Zero mainnet seed node — copy to /opt/bzero-mainnet/bitcoin.conf on the VPS.
+# Used with blockzero-mainnet.service (no -testnet flag).
+
+server=1
+txindex=1
+
+[main]
+listen=1
+port=8210
+bind=0.0.0.0:8210
+rpcbind=127.0.0.1
+rpcallowip=127.0.0.1
+rpcport=8211
