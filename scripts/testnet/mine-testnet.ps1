@@ -291,7 +291,10 @@ $daemon = Find-Exe "bitcoind.exe"
 # validating an incoming block (RandomX verification blocks RPC momentarily).
 $rpcUp = $false
 if (Get-Process bitcoind -ErrorAction SilentlyContinue) {
-    for ($i = 0; $i -lt 10; $i++) {
+    # Probe up to ~60s: right after a fresh start the node validates the chain
+    # with RandomX and blocks RPC for 30-40s. Only a node that stays silent the
+    # whole window is treated as truly stuck and cleared.
+    for ($i = 0; $i -lt 30; $i++) {
         if ((Try-Invoke-Cli @("getblockcount")).Ok) { $rpcUp = $true; break }
         Start-Sleep -Seconds 2
     }
