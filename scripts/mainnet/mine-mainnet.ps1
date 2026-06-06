@@ -53,7 +53,7 @@ function Try-Invoke-Cli([string[]]$CliArgs) {
     $ErrorActionPreference = "Continue"
     $prevNative = $PSNativeCommandUseErrorActionPreference
     $PSNativeCommandUseErrorActionPreference = $false
-    $out = & $cli -datadir="$DataDir" -rpcport=$RpcPort @CliArgs 2>&1
+    $out = & $cli -datadir="$DataDir" "-rpcport=$RpcPort" @CliArgs 2>&1
     $exit = $LASTEXITCODE
     $PSNativeCommandUseErrorActionPreference = $prevNative
     $ErrorActionPreference = $prevEap

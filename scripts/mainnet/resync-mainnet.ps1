@@ -27,7 +27,7 @@ Write-Host ""
 
 if (Get-Process bitcoind -ErrorAction SilentlyContinue) {
     Write-Host "Stopping bitcoind..."
-    try { & $cli -datadir="$DataDir" -rpcport=$RpcPort stop | Out-Null } catch {}
+    try { & $cli -datadir="$DataDir" "-rpcport=$RpcPort" stop | Out-Null } catch {}
     Start-Sleep -Seconds 5
     Get-Process bitcoind -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
     Start-Sleep -Seconds 2
@@ -61,9 +61,9 @@ $deadline = (Get-Date).AddMinutes(2)
 while ((Get-Date) -lt $deadline) {
     Start-Sleep -Seconds 5
     try {
-        $peers = [int](& $cli -datadir="$DataDir" -rpcport=$RpcPort getconnectioncount)
-        $height = [int](& $cli -datadir="$DataDir" -rpcport=$RpcPort getblockcount)
-        $genesis = & $cli -datadir="$DataDir" -rpcport=$RpcPort getblockhash 0
+        $peers = [int](& $cli -datadir="$DataDir" "-rpcport=$RpcPort" getconnectioncount)
+        $height = [int](& $cli -datadir="$DataDir" "-rpcport=$RpcPort" getblockcount)
+        $genesis = & $cli -datadir="$DataDir" "-rpcport=$RpcPort" getblockhash 0
         Write-Host "  peers=$peers height=$height"
         if ($peers -ge 1 -and $OfficialGenesis -notlike "PENDING*" -and $genesis -eq $OfficialGenesis) {
             Write-Host ""
