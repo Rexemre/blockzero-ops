@@ -93,17 +93,18 @@ a:hover { color: var(--bz-cyan); }
 
 /* ---------- BLOZ suite nav (shared across bloz.org / pool / explorer / bridge) ---------- */
 .bz-suite { position: sticky; top: 0; z-index: 1045; display: flex; align-items: center; gap: 16px; padding: 10px 20px; background: rgba(5, 7, 10, 0.92); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid var(--bz-line); }
-.bz-suite-brand { display: flex; align-items: center; gap: 10px; font-family: "Orbitron", "Rajdhani", sans-serif; font-weight: 700; font-size: 0.82rem; letter-spacing: 0.12em; color: var(--bz-silver) !important; text-decoration: none !important; white-space: nowrap; }
-.bz-suite-brand img { width: 22px; height: 22px; object-fit: contain; filter: drop-shadow(0 0 8px rgba(63, 169, 255, 0.45)); }
+.bz-suite-brand { display: flex; align-items: center; gap: 14px; font-family: "Orbitron", "Rajdhani", sans-serif; font-weight: 700; font-size: 1rem; letter-spacing: 0.12em; color: var(--bz-silver) !important; text-decoration: none !important; white-space: nowrap; }
+.bz-suite-brand img { width: 55px; height: 55px; object-fit: contain; filter: drop-shadow(0 0 10px rgba(63, 169, 255, 0.45)); }
 .bz-suite-brand:hover { color: var(--bz-white) !important; }
 .bz-suite-links { display: flex; gap: 2px; margin-left: auto; }
 .bz-suite-links a { font-family: "Rajdhani", sans-serif; font-weight: 600; font-size: 0.8rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--bz-muted) !important; text-decoration: none !important; padding: 5px 13px; border: 1px solid transparent; transition: color 0.2s, border-color 0.2s, background 0.2s; }
 .bz-suite-links a:hover { color: var(--bz-cyan) !important; }
 .bz-suite-links a.active { color: var(--bz-cyan) !important; border-color: rgba(111, 231, 255, 0.3); background: rgba(111, 231, 255, 0.07); }
 @media (max-width: 560px) {
-\t.bz-suite { padding: 9px 12px; gap: 8px; }
+\t.bz-suite { padding: 8px 12px; gap: 8px; }
 \t.bz-suite-links a { padding: 5px 8px; font-size: 0.72rem; letter-spacing: 0.08em; }
 \t.bz-suite-brand span { display: none; }
+\t.bz-suite-brand img { width: 40px; height: 40px; }
 }
 """
 
@@ -113,7 +114,7 @@ def suite_nav_pug(explorer_url: str) -> str:
     return (
         '\t\tnav.bz-suite(aria-label="Block Zero sites")\n'
         '\t\t\ta.bz-suite-brand(href="https://bloz.org")\n'
-        '\t\t\t\timg(src="https://bloz.org/assets/bloz-mark.png", alt="", width="22", height="22")\n'
+        '\t\t\t\timg(src="https://bloz.org/assets/bloz-mark.png", alt="", width="55", height="55")\n'
         "\t\t\t\tspan BLOCK ZERO\n"
         "\t\t\t.bz-suite-links\n"
         '\t\t\t\ta(href="https://bloz.org") Home\n'
@@ -208,6 +209,12 @@ def theme_patches(base: str, cfg: dict) -> dict[str, list[tuple[str, str, int]]]
     return {
         f"{base}/views/layout.pug": [
             ("+themeCss", f"+themeCss\n{css_link}", 1),
+            # Upgrade older injected nav (22px logo) in place.
+            (
+                'img(src="https://bloz.org/assets/bloz-mark.png", alt="", width="22", height="22")',
+                'img(src="https://bloz.org/assets/bloz-mark.png", alt="", width="55", height="55")',
+                1,
+            ),
             (
                 "\tbody.bg-header-footer\n\t\tnav.navbar",
                 f"\tbody.bg-header-footer\n{nav}\t\tnav.navbar",
