@@ -1,17 +1,20 @@
-# BLOZ pool miner (Windows) — no node sync, no wallet setup, just mine.
+# BLOZ pool miner (Windows) — uses your BlockZero wallet, connects to pool.bloz.org
 # Usage:
-#   .\mine-pool-mainnet.ps1              # install + mine (asks for bz1 address first time)
+#   .\mine-pool-mainnet.ps1              # install + mine (BlockZero address auto)
+#   .\mine-pool-mainnet.ps1 -Threads 4   # 4 CPU threads
 #   .\mine-pool-mainnet.ps1 -Status      # pool height, fee, stratum status
 #   .\mine-pool-mainnet.ps1 -Install     # download miner only
-#   .\mine-pool-mainnet.ps1 -Address bz1... -Threads 8
 #
-# Payouts go to the bz1 address in your worker name (PPLNS, 2% fee).
+# Recommended entry point (wallet + pool in one flow):
+#   .\mine-mainnet.ps1 -Pool
+#   .\mine-mainnet.ps1 -Pool -Threads 4
 
 param(
     [string]$Address = "",
     [string]$WorkerName = "",
     [string]$PoolUrl = "wss://pool.bloz.org/stratum",
     [string]$InstallDir = "$env:LOCALAPPDATA\BlockZero\pool",
+    [string]$BlockZeroDataDir = "$env:LOCALAPPDATA\BlockZeroMainnet",
     [int]$Threads = 0,
     [switch]$Status,
     [switch]$Install,
@@ -31,6 +34,14 @@ function Read-ConfValue([string]$Key) {
         $parts = $line -split "=", 2
         if ($parts[0].Trim() -eq $Key) { return $parts[1].Trim() }
     }
+    return ""
+}
+
+function Get-BlockZeroMiningAddress {
+    $addrFile = Join-Path $BlockZeroDataDir "mining-address.txt"
+    if (-not (Test-Path $addrFile)) { return "" }
+    $addr = (Get-Content $addrFile -Raw).Trim()
+    if ($addr -match '^bz1') { return $addr }
     return ""
 }
 
@@ -57,7 +68,6 @@ function Ensure-Installed {
         & $installer @args
         return
     }
-    # Standalone: blockzero-ops only (no local blockzero-pool clone)
     $repo = "Rexemre/blockzero-pool"
     New-Item -ItemType Directory -Force -Path $BinDir | Out-Null
     if (-not (Test-Path $ExePath) -or $Force) {
@@ -66,22 +76,24 @@ function Ensure-Installed {
         if (-not $asset) { throw "Download bz-pool-miner.exe from https://github.com/$repo/releases" }
         Write-Host "Downloading bz-pool-miner ($($rel.tag_name))..."
         Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $ExePath -UseBasicParsing
-    }
-    if (-not (Test-Path $ConfPath)) {
-        if (-not $Address) {
-            Write-Host "Enter your bz1 payout address:"
-            $script:Address = Read-Host
+        foreach ($dll in @("libssl-3-x64.dll", "libcrypto-3-x64.dll")) {
+            $dllAsset = $rel.assets | Where-Object { $_.name -eq $dll } | Select-Object -First 1
+            if ($dllAsset) {
+                Invoke-WebRequest -Uri $dllAsset.browser_download_url -OutFile (Join-Path $BinDir $dll) -UseBasicParsing
+            }
         }
-        if (-not $WorkerName) { $script:WorkerName = "rig1" }
-        $t = Get-ThreadCount
-        @"
-POOL_URL=$PoolUrl
-BZ1_ADDRESS=$Address
-WORKER_NAME=$WorkerName
-POOL_PASS=x
-THREADS=$t
-"@ | Set-Content -Path $ConfPath -Encoding ASCII
     }
+}
+
+function Save-PoolConfig([string]$Addr, [string]$Worker, [int]$ThreadCount) {
+    @"
+# BLOZ pool miner - managed by blockzero-ops
+# Payout address comes from your BlockZero wallet (mining-address.txt)
+POOL_URL=$PoolUrl
+BZ1_ADDRESS=$Addr
+WORKER_NAME=$Worker
+THREADS=$ThreadCount
+"@ | Set-Content -Path $ConfPath -Encoding ASCII
 }
 
 function Show-PoolStatus {
@@ -104,12 +116,12 @@ function Show-PoolStatus {
     }
     Write-Host ""
     Write-Host "Dashboard: https://pool.bloz.org"
-    if (Test-Path $ConfPath) {
-        $addr = Read-ConfValue "BZ1_ADDRESS"
-        $worker = Read-ConfValue "WORKER_NAME"
-        if ($addr -and $worker) {
-            Write-Host "Your worker: $addr.$worker"
-        }
+    $addr = if ($Address) { $Address } else { Read-ConfValue "BZ1_ADDRESS" }
+    if (-not $addr) { $addr = Get-BlockZeroMiningAddress }
+    $worker = if ($WorkerName) { $WorkerName } else { Read-ConfValue "WORKER_NAME" }
+    if (-not $worker) { $worker = "pc" }
+    if ($addr -and $worker) {
+        Write-Host "Your worker: $addr.$worker"
     }
 }
 
@@ -126,26 +138,41 @@ if ($Install) {
 }
 
 if (-not $Address) { $Address = Read-ConfValue "BZ1_ADDRESS" }
-if (-not $WorkerName) { $WorkerName = Read-ConfValue "WORKER_NAME" }
-if (-not $WorkerName) { $WorkerName = "rig1" }
+if (-not $Address) { $Address = Get-BlockZeroMiningAddress }
 
-if (-not $Address -or $Address -eq "bz1YOURADDRESSHERE") {
-    Write-Host "No payout address configured."
-    Write-Host "Run: .\mine-pool-mainnet.ps1 -Address bz1YOURADDRESS"
+if (-not $Address) {
+    Write-Host ""
+    Write-Host "No BlockZero wallet address found."
+    Write-Host "Run this once to create wallet + address, then pool mine:"
+    Write-Host "  .\mine-mainnet.ps1 -Pool"
+    Write-Host ""
+    Write-Host "Or solo setup first:"
+    Write-Host "  .\mine-mainnet.ps1"
     exit 1
 }
 
+if (-not $WorkerName) { $WorkerName = Read-ConfValue "WORKER_NAME" }
+if (-not $WorkerName) { $WorkerName = "pc" }
+
 if (-not (Test-Path $ExePath)) {
-    throw "Miner missing at $ExePath — run with -Install"
+    throw "Miner missing at $ExePath - run with -Install"
 }
 
 $t = Get-ThreadCount
+Save-PoolConfig $Address $WorkerName $t
 $worker = "$Address.$WorkerName"
 
 Show-PoolStatus
-Write-Host "Starting miner..."
+Write-Host ""
+Write-Host "Payout address (BlockZero wallet): $Address"
+Write-Host "Starting pool miner..."
 Write-Host "Worker: $worker | Threads: $t"
 Write-Host "Press Ctrl+C to stop."
 Write-Host ""
 
-& $ExePath -o $PoolUrl -u $worker -p x -t $t
+Push-Location $BinDir
+try {
+    & $ExePath -o $PoolUrl -u $worker -Threads $t
+} finally {
+    Pop-Location
+}

@@ -12,8 +12,8 @@ Fair launch. Proof-of-work. No presale. No insiders.
 
 | Platform | Script |
 |----------|--------|
+| **Windows (pool)** | [`mine-mainnet.ps1 -Pool`](scripts/mainnet/mine-mainnet.ps1) or double-click [`mine-pool.bat`](scripts/mainnet/mine-pool.bat) |
 | **Windows (solo)** | [`install-windows.ps1`](scripts/testnet/install-windows.ps1) → [`mine-mainnet.ps1`](scripts/mainnet/mine-mainnet.ps1) |
-| **Windows (pool)** | [`mine-pool-mainnet.ps1`](scripts/mainnet/mine-pool-mainnet.ps1) or double-click [`mine-pool.bat`](scripts/mainnet/mine-pool.bat) |
 | **Linux / macOS** | Build from [blockzero-core Releases](https://github.com/Rexemre/blockzero-core/releases), then use [`scripts/mainnet/`](scripts/mainnet/) |
 
 **Public seed:** `217.160.46.61:8210` · **Explorer:** https://explorer.bloz.org
@@ -32,12 +32,13 @@ Downloads prebuilt binaries from [blockzero-core Releases](https://github.com/Re
 
 Full walkthrough: [blockzero-docs/quickstart-mining.md](https://github.com/Rexemre/blockzero-docs/blob/main/quickstart-mining.md)
 
-### Pool mining (easier — no node sync)
+### Pool mining (recommended — wallet + pool in one)
 
 ```powershell
 cd blockzero-ops\scripts\mainnet
-.\mine-pool-mainnet.ps1 -Status   # check pool.bloz.org
-.\mine-pool-mainnet.ps1            # asks for bz1 address once, then mines
+.\mine-mainnet.ps1 -Pool              # wallet + pool mine
+.\mine-mainnet.ps1 -Pool -Threads 4  # custom thread count
+.\mine-pool-mainnet.ps1 -Status      # check pool.bloz.org
 ```
 
 Pool dashboard: https://pool.bloz.org · Miner zip: [blockzero-pool Releases](https://github.com/Rexemre/blockzero-pool/releases)

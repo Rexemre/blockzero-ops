@@ -1,7 +1,10 @@
 # Block Zero MAINNET miner (Windows, native binaries - NOT WSL)
 # Usage:
-#   .\mine-mainnet.ps1 -Threads 8   # mine with 8 RandomX threads (default: auto, max 16)
+#   .\mine-mainnet.ps1 -Pool        # pool mine (uses BlockZero wallet address, recommended)
+#   .\mine-mainnet.ps1 -Pool -Threads 4
+#   .\mine-mainnet.ps1 -Threads 8   # solo mine with 8 RandomX threads (default: auto, max 16)
 #   .\mine-mainnet.ps1 -Status      # show height, peers, balance
+#   .\mine-mainnet.ps1 -Status -Snapshot  # one markdown table for blog/social (no log spam)
 #   .\mine-mainnet.ps1 -Stop        # stop bitcoind
 #   .\resync-mainnet.ps1            # reset fork and re-sync (run first if solo-mined)
 #
@@ -14,16 +17,23 @@ param(
     [string]$WalletName = "mining",
     [long]$MaxTries = 500000000,
     [int]$Threads = 0,
+    [switch]$Pool,
     [switch]$Status,
+    [switch]$Snapshot,
     [switch]$Stop
 )
+
+$script:PoolModeAfterSetup = $false
 
 . "$PSScriptRoot\chain-identity.ps1"
 
 $ErrorActionPreference = "Stop"
 
 function Get-GenerateToAddressArgs([string]$Name, [string]$Addr) {
-    $args = @("-rpcwallet=$Name", "generatetoaddress", "1", $Addr, "$MaxTries")
+    # -rpcclienttimeout=0: a block can take longer than the default 15-min client
+    # timeout at low solo hashrate; without this the call aborts and restarts from
+    # zero every 15 min and never accumulates enough work to find a block.
+    $args = @("-rpcclienttimeout=0", "-rpcwallet=$Name", "generatetoaddress", "1", $Addr, "$MaxTries")
     if ($Threads -gt 0) { $args += "$Threads" }
     return $args
 }
@@ -41,19 +51,124 @@ function Format-Hashrate([double]$hps) {
     return ("{0:N0} H/s" -f $hps)
 }
 
-function Get-LocalMiningStats {
-    # Returns the most recent round's measured hashrate (rc6+ nodes). Older
-    # binaries omit the field, so we return $null and callers stay quiet.
+function Get-MiningHashrateSummary {
     try {
         $mi = Invoke-Cli @("getmininginfo") | ConvertFrom-Json
-        if ($null -eq $mi.localhashps) { return $null }
+        $network = [double]$mi.networkhashps
+        $local = 0.0
+        if ($null -ne $mi.localhashps) { $local = [double]$mi.localhashps }
+        $sharePct = if ($network -gt 0 -and $local -gt 0) { ($local / $network) * 100.0 } else { $null }
         return [pscustomobject]@{
-            Hps     = [double]$mi.localhashps
-            Hashes  = [double]$mi.localhashes
-            Seconds = [double]$mi.localhashseconds
-            Fast    = [bool]$mi.localfastmode
+            NetworkHps = $network
+            LocalHps   = $local
+            SharePct   = $sharePct
+            Hashes     = if ($null -ne $mi.localhashes) { [double]$mi.localhashes } else { 0 }
+            Seconds    = if ($null -ne $mi.localhashseconds) { [double]$mi.localhashseconds } else { 0 }
+            Fast       = if ($null -ne $mi.localfastmode) { [bool]$mi.localfastmode } else { $false }
         }
     } catch { return $null }
+}
+
+function Get-LocalMiningStats {
+    $hr = Get-MiningHashrateSummary
+    if (-not $hr -or $hr.LocalHps -le 0) { return $null }
+    return [pscustomobject]@{
+        Hps     = $hr.LocalHps
+        Hashes  = $hr.Hashes
+        Seconds = $hr.Seconds
+        Fast    = $hr.Fast
+    }
+}
+
+function Format-HashrateShare([double]$LocalHps, [double]$NetworkHps) {
+    if ($NetworkHps -le 0 -or $LocalHps -le 0) { return "" }
+    $pct = ($LocalHps / $NetworkHps) * 100.0
+    if ($pct -ge 0.01) { return ("{0:N2}% of network" -f $pct) }
+    return ("{0:N4}% of network" -f $pct)
+}
+
+function Write-HashrateSummary {
+    param([string]$Prefix = "")
+    $hr = Get-MiningHashrateSummary
+    if (-not $hr) { return }
+
+    $p = if ($Prefix) { "$Prefix " } else { "" }
+    if ($hr.NetworkHps -gt 0) {
+        Write-Host ("{0}Network hashrate: {1}" -f $p, (Format-Hashrate $hr.NetworkHps))
+    } else {
+        Write-Host ("{0}Network hashrate: n/a (chain just started or no recent blocks)" -f $p)
+    }
+
+    if ($hr.LocalHps -gt 0) {
+        $share = Format-HashrateShare $hr.LocalHps $hr.NetworkHps
+        $mode = if ($hr.Fast) { "fast" } else { "light" }
+        $line = "{0}Your hashrate: {1} [{2} mode]" -f $p, (Format-Hashrate $hr.LocalHps), $mode
+        if ($share) { $line += " | $share" }
+        Write-Host $line
+    }
+}
+
+function Format-CompactRoundLine {
+    param(
+        [string]$Time,
+        [int]$Height,
+        $Hr,
+        $Stats
+    )
+    $parts = @("$Time  h=$Height")
+    if ($Hr) {
+        if ($Hr.NetworkHps -gt 0) {
+            $parts += "net $(Format-Hashrate $Hr.NetworkHps)"
+        }
+        if ($Hr.LocalHps -gt 0) {
+            $you = "you $(Format-Hashrate $Hr.LocalHps)"
+            $share = Format-HashrateShare $Hr.LocalHps $Hr.NetworkHps
+            if ($share) { $you += " ($share)" }
+            $parts += $you
+            $mode = if ($Hr.Fast) { "fast" } else { "light" }
+            $parts += $mode
+        }
+    }
+    if ($Stats -and $Stats.Seconds -gt 0) {
+        $parts += ("round {0:N2}M hashes / {1:N0}s" -f ($Stats.Hashes / 1000000), $Stats.Seconds)
+    }
+    return ($parts -join "  |  ")
+}
+
+function Write-MiningSnapshot {
+    param(
+        [int]$Height,
+        [int]$Peers,
+        [object]$Bal,
+        [object]$Rewards
+    )
+    $hr = Get-MiningHashrateSummary
+    $stats = Get-LocalMiningStats
+    $net = if ($hr -and $hr.NetworkHps -gt 0) { Format-Hashrate $hr.NetworkHps } else { "n/a" }
+    $you = if ($hr -and $hr.LocalHps -gt 0) { Format-Hashrate $hr.LocalHps } else { "n/a" }
+    $share = if ($hr) { Format-HashrateShare $hr.LocalHps $hr.NetworkHps } else { "" }
+    $mode = if ($hr -and $hr.Fast) { "fast" } else { "light" }
+    $round = if ($stats -and $stats.Seconds -gt 0) {
+        "{0:N2}M hashes in {1:N0}s" -f ($stats.Hashes / 1000000), $stats.Seconds
+    } else { "n/a" }
+    $blocks = if ($Rewards.MatureBlockCount -gt 0 -or $Rewards.ImmatureBlockCount -gt 0) {
+        "$($Rewards.MatureBlockCount) mature + $($Rewards.ImmatureBlockCount) immature"
+    } else { "0" }
+
+    Write-Host ""
+    Write-Host "| Metric | Value |"
+    Write-Host "|--------|-------|"
+    Write-Host "| Height | $Height |"
+    Write-Host "| Peers | $Peers |"
+    Write-Host "| Network hashrate | $net |"
+    Write-Host "| Your hashrate | $you$(if ($share) { " ($share)" }) |"
+    Write-Host "| RandomX mode | $mode |"
+    Write-Host "| Last round | $round |"
+    Write-Host "| Blocks mined | $blocks |"
+    Write-Host "| Balance (mature) | $($Bal.mine.trusted) BLOZ |"
+    Write-Host "| Balance (immature) | $($Bal.mine.untrusted_pending) BLOZ |"
+    Write-Host "| Balance (total) | $($Bal.mine.trusted + $Bal.mine.untrusted_pending) BLOZ |"
+    Write-Host ""
 }
 
 function Find-Exe([string]$Name) {
@@ -280,6 +395,31 @@ function Wait-ForTip {
     }
 }
 
+function Get-SavedMiningAddress {
+    $addrFile = Join-Path $DataDir "mining-address.txt"
+    if (-not (Test-Path $addrFile)) { return "" }
+    $addr = (Get-Content $addrFile -Raw).Trim()
+    if ($addr -match '^bz1') { return $addr }
+    return ""
+}
+
+function Start-PoolMining([string]$Addr) {
+    $poolArgs = @{ Address = $Addr }
+    if ($Threads -gt 0) { $poolArgs.Threads = $Threads }
+    & "$PSScriptRoot\mine-pool-mainnet.ps1" @poolArgs
+    exit $LASTEXITCODE
+}
+
+if ($Pool) {
+    $saved = Get-SavedMiningAddress
+    if ($saved) {
+        Write-Host "Using BlockZero wallet address for pool payouts."
+        Start-PoolMining $saved
+    }
+    Write-Host "No wallet address yet - setting up BlockZero node + wallet first..."
+    $script:PoolModeAfterSetup = $true
+}
+
 if ($Stop) {
     try { Invoke-Cli @("stop") | Out-Null; Write-Host "Stopping bitcoind..." }
     catch { Write-Host "bitcoind was not running (RPC)."; }
@@ -355,12 +495,18 @@ if ($Status) {
     $rewards = Get-RewardSummary $WalletName $bal
     $addrFile = Get-MiningAddressFile
     $activeAddr = if (Test-Path $addrFile) { (Get-Content $addrFile -Raw).Trim() } else { "" }
+
+    if ($Snapshot) {
+        Write-MiningSnapshot -Height $height -Peers $peers -Bal $bal -Rewards $rewards
+        exit 0
+    }
+
     Write-Host "Peers: $peers"
     Write-Host "Height: $height"
+    Write-HashrateSummary
     $stats = Get-LocalMiningStats
-    if ($stats -and $stats.Hps -gt 0) {
-        $mode = if ($stats.Fast) { "fast" } else { "light" }
-        Write-Host "Local hashrate (last round): $(Format-Hashrate $stats.Hps) [$mode mode]"
+    if ($stats -and $stats.Hps -gt 0 -and $stats.Seconds -gt 0) {
+        Write-Host ("  Last round: {0:N2}M hashes in {1:N1}s" -f ($stats.Hashes / 1000000), $stats.Seconds)
     }
     if ($activeAddr) {
         Write-Host "Mining address: $activeAddr"
@@ -371,6 +517,8 @@ if ($Status) {
         Write-Host "Blocks mined: $($rewards.MatureBlockCount) mature + $($rewards.ImmatureBlockCount) immature (100-block wait)"
     }
     Write-Host (Format-WalletBalance $bal)
+    Write-Host ""
+    Write-Host "Blog snapshot (copy once, no log spam): .\mine-mainnet.ps1 -Status -Snapshot"
     exit 0
 }
 
@@ -386,6 +534,11 @@ function Ensure-NodeUp {
 
 $addr = Get-OrCreate-MiningAddress $WalletName
 
+if ($PoolModeAfterSetup) {
+    Write-Host "Wallet ready. Starting pool miner..."
+    Start-PoolMining $addr
+}
+
 Write-Host "Peers: $peers | Chain height: $height"
 Write-Host "Mining to: $addr | RandomX threads: $(Get-MiningThreadsLabel)"
 $startBal = Invoke-Cli @("-rpcwallet=$WalletName", "getbalances") | ConvertFrom-Json
@@ -397,20 +550,25 @@ Write-Host ""
 while ($true) {
     try {
         Ensure-NodeUp
-        $height = Wait-ForTip
-        Write-Host "$(Get-Date -Format 'HH:mm:ss') height=$height mining..."
+        # Block Zero: on a contested split the foreign (non-SegWit) chain advertises
+        # higher headers (e.g. 428) that this node will never validate, so the old
+        # Wait-ForTip (which waits for headers==blocks and for the network tip) would
+        # hang forever on "catching up". Mine on our local validated tip instead;
+        # valid blocks from the seed still sync in automatically before each round.
+        $height = [int](Invoke-Cli @("getblockcount"))
+        Write-Host "$(Get-Date -Format 'HH:mm:ss')  mining h=$height ..."
         $result = Invoke-Cli (Get-GenerateToAddressArgs $WalletName $addr)
+        $hr = Get-MiningHashrateSummary
         $stats = Get-LocalMiningStats
-        if ($stats -and $stats.Hps -gt 0) {
-            $mode = if ($stats.Fast) { "fast" } else { "light" }
-            Write-Host "$(Get-Date -Format 'HH:mm:ss') hashrate: $(Format-Hashrate $stats.Hps) [$mode] ($([math]::Round($stats.Hashes/1000000,2))M hashes in $([math]::Round($stats.Seconds,1))s)"
-        }
+        Write-Host (Format-CompactRoundLine -Time (Get-Date -Format 'HH:mm:ss') -Height $height -Hr $hr -Stats $stats)
         if ($result -match '[0-9a-f]{64}') {
-            Write-Host "Block found: $result"
             $bal = Invoke-Cli @("-rpcwallet=$WalletName", "getbalances") | ConvertFrom-Json
             $newHeight = Invoke-Cli @('getblockcount')
-            $balLine = Format-WalletBalance $bal
-            Write-Host "New height: $newHeight; $balLine"
+            $hash = if ($result -match '([0-9a-f]{64})') { $matches[1] } else { $result }
+            Write-Host ""
+            Write-Host "$(Get-Date -Format 'HH:mm:ss')  *** BLOCK $newHeight ***  |  $(Format-WalletBalance $bal)"
+            Write-Host "           hash: $hash"
+            Write-Host ""
         }
     } catch {
         $msg = ($_.Exception.Message -split "`n")[0].Trim()
