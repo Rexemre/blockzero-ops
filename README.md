@@ -41,7 +41,7 @@ cd blockzero-ops\scripts\mainnet
 .\mine-pool-mainnet.ps1 -Status      # check pool.bloz.org
 ```
 
-Pool dashboard: https://pool.bloz.org · Miner zip: [blockzero-pool Releases](https://github.com/Rexemre/blockzero-pool/releases)
+Pool dashboard: https://pool.bloz.org
 
 ---
 

@@ -1,0 +1,44 @@
+name: build-pool-miner
+
+on:
+  push:
+    branches: [main]
+    tags: ['pool-miner-v*']
+    paths:
+      - 'pool/native/**'
+      - 'pool/scripts/**'
+      - '.github/workflows/build-pool-miner.yml'
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ilammy/msvc-dev-cmd@v1
+      - name: Install CMake
+        run: choco install cmake -y
+      - name: Install OpenSSL runtime
+        run: choco install openssl.light -y --no-progress
+      - name: Build bz-pool-miner
+        shell: pwsh
+        run: ./pool/scripts/build-native.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bz-pool-miner-windows
+          path: |
+            pool/bin/bz-pool-miner.exe
+            pool/bin/libssl-3-x64.dll
+            pool/bin/libcrypto-3-x64.dll
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            pool/bin/bz-pool-miner.exe
+            pool/bin/libssl-3-x64.dll
+            pool/bin/libcrypto-3-x64.dll
+          generate_release_notes: false
+          body: |
+            Pool miner binary for blockzero-ops (mine-mainnet.ps1 -Pool).

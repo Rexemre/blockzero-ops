@@ -53,36 +53,15 @@ function Get-ThreadCount {
 }
 
 function Ensure-Installed {
-    $installer = $null
-    foreach ($c in @(
-        (Join-Path $PSScriptRoot "..\..\..\blockzero-pool\scripts\install-pool-windows.ps1"),
-        (Join-Path $env:USERPROFILE "blockzero\blockzero-pool\scripts\install-pool-windows.ps1")
-    )) {
-        if (Test-Path $c) { $installer = $c; break }
+    $installer = Join-Path $PSScriptRoot "install-pool-windows.ps1"
+    if (-not (Test-Path $installer)) {
+        throw "install-pool-windows.ps1 missing next to mine-pool-mainnet.ps1"
     }
-    if ($installer) {
-        $args = @{ InstallDir = $InstallDir }
-        if ($Address) { $args.Address = $Address }
-        if ($WorkerName) { $args.WorkerName = $WorkerName }
-        if ($Force) { $args.Force = $true }
-        & $installer @args
-        return
-    }
-    $repo = "Rexemre/blockzero-pool"
-    New-Item -ItemType Directory -Force -Path $BinDir | Out-Null
-    if (-not (Test-Path $ExePath) -or $Force) {
-        $rel = Invoke-RestMethod "https://api.github.com/repos/$repo/releases/latest"
-        $asset = $rel.assets | Where-Object { $_.name -eq "bz-pool-miner.exe" } | Select-Object -First 1
-        if (-not $asset) { throw "Download bz-pool-miner.exe from https://github.com/$repo/releases" }
-        Write-Host "Downloading bz-pool-miner ($($rel.tag_name))..."
-        Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $ExePath -UseBasicParsing
-        foreach ($dll in @("libssl-3-x64.dll", "libcrypto-3-x64.dll")) {
-            $dllAsset = $rel.assets | Where-Object { $_.name -eq $dll } | Select-Object -First 1
-            if ($dllAsset) {
-                Invoke-WebRequest -Uri $dllAsset.browser_download_url -OutFile (Join-Path $BinDir $dll) -UseBasicParsing
-            }
-        }
-    }
+    $args = @{ InstallDir = $InstallDir }
+    if ($Address) { $args.Address = $Address }
+    if ($WorkerName) { $args.WorkerName = $WorkerName }
+    if ($Force) { $args.Force = $true }
+    & $installer @args
 }
 
 function Save-PoolConfig([string]$Addr, [string]$Worker, [int]$ThreadCount) {
