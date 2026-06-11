@@ -44,10 +44,28 @@ THREADS=$Threads
 "@ | Set-Content -Path $ConfPath -Encoding ASCII
 }
 
-if ((Test-Path $ExePath) -and -not $Force) {
-    Write-Host "Pool miner already installed: $ExePath"
+$VersionFile = Join-Path $InstallDir "miner-version.txt"
+$installedTag = if (Test-Path $VersionFile) { (Get-Content $VersionFile -Raw).Trim() } else { "" }
+
+$needInstall = $Force -or -not (Test-Path $ExePath)
+$info = $null
+if (-not $needInstall) {
+    # Auto-update: re-download when a newer pool-miner release is available.
+    try {
+        $info = Get-MinerRelease -Ver $Version
+        if ($info.Tag -ne $installedTag) {
+            Write-Host "Pool miner update: $installedTag -> $($info.Tag)"
+            $needInstall = $true
+        }
+    } catch {
+        Write-Host "Update check skipped (offline?): $($_.Exception.Message)"
+    }
+}
+
+if (-not $needInstall) {
+    Write-Host "Pool miner up to date: $ExePath ($installedTag)"
 } else {
-    $info = Get-MinerRelease -Ver $Version
+    if (-not $info) { $info = Get-MinerRelease -Ver $Version }
     Write-Host "Downloading bz-pool-miner ($($info.Tag))..."
     Invoke-WebRequest -Uri $info.ExeUrl -OutFile $ExePath -UseBasicParsing
     foreach ($dll in @("libssl-3-x64.dll", "libcrypto-3-x64.dll")) {
@@ -56,7 +74,8 @@ if ((Test-Path $ExePath) -and -not $Force) {
             Invoke-WebRequest -Uri $asset.browser_download_url -OutFile (Join-Path $BinDir $dll) -UseBasicParsing
         }
     }
-    Write-Host "OK: $ExePath"
+    Set-Content -Path $VersionFile -Value $info.Tag -Encoding ASCII
+    Write-Host "OK: $ExePath ($($info.Tag))"
 }
 
 if ($Address) {
