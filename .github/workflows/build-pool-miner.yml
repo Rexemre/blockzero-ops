@@ -33,7 +33,9 @@ jobs:
             pool/bin/libcrypto-3-x64.dll
 
   linux:
-    runs-on: ubuntu-latest
+    # ubuntu-22.04: glibc 2.35 — runs on Ubuntu 22.04+, Debian 12+, most current VPS.
+    # (ubuntu-latest = 24.04 / glibc 2.39 breaks older distros like Ubuntu 20.04.)
+    runs-on: ubuntu-22.04
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
@@ -41,7 +43,8 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y cmake g++ libssl-dev
       - name: Build bz-pool-miner
         run: |
-          cmake -S pool/native -B build -DCMAKE_BUILD_TYPE=Release
+          cmake -S pool/native -B build -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_EXE_LINKER_FLAGS=-static-libstdc++
           cmake --build build --target bz-pool-miner -j"$(nproc)"
           mkdir -p dist
           cp build/bz-pool-miner dist/
@@ -93,6 +96,10 @@ jobs:
           generate_release_notes: false
           body: |
             BLOZ pool miner for pool.bloz.org
+
+            Linux build targets **glibc 2.35+** (Ubuntu 22.04, Debian 12, current VPS).
+            On older distros (Ubuntu 20.04 / Debian 11), use the Python fallback in `mine-pool.sh`
+            or build from source.
 
             | Platform | File | Run |
             |----------|------|-----|

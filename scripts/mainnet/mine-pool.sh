@@ -14,6 +14,7 @@
 set -euo pipefail
 
 POOL_URL="${POOL_URL:-wss://pool.bloz.org/stratum}"
+POOL_REPO="${POOL_REPO:-Rexemre/blockzero-pool}"
 REPO="${REPO:-Rexemre/blockzero-ops}"
 INSTALL_DIR="${INSTALL_DIR:-$HOME/.blockzero/pool}"
 DATA_DIR="${DATA_DIR:-$HOME/.blockzero-mainnet}"
@@ -88,6 +89,41 @@ if [ ! -x "$BIN" ] || [ "${FORCE:-0}" = "1" ]; then
     download_miner
 fi
 
+needs_python_miner() {
+    local err
+    err="$("$BIN" 2>&1 || true)"
+    echo "$err" | grep -qE 'GLIBC_|GLIBCXX_'
+}
+
+ensure_python_miner() {
+    local py_dir="$INSTALL_DIR/python-miner"
+    if [ ! -f "$py_dir/miner/blockzero-miner.py" ]; then
+        say "Setting up Python pool miner (compatible with older Linux)..."
+        mkdir -p "$py_dir"
+        curl -fsSL "https://codeload.github.com/$POOL_REPO/tar.gz/refs/heads/main" \
+            | tar -xz -C "$py_dir" --strip-components=1
+    fi
+    if ! python3 -c "import randomx, websocket" 2>/dev/null; then
+        say "Installing Python deps (randomx, websocket-client)..."
+        python3 -m pip install --user -q -r "$py_dir/requirements.txt" \
+            || python3 -m pip install -q -r "$py_dir/requirements.txt"
+    fi
+}
+
+run_python_miner() {
+    ensure_python_miner
+    python3 "$INSTALL_DIR/python-miner/miner/blockzero-miner.py" \
+        -o "$POOL_URL" -u "$FULL_WORKER" -t "$THREADS"
+}
+
+USE_PYTHON=0
+if needs_python_miner; then
+    say ""
+    say "Prebuilt bz-pool-miner needs a newer system libc (built for recent Ubuntu)."
+    say "Using Python miner instead — same pool, same payouts."
+    USE_PYTHON=1
+fi
+
 # ---------- threads ----------
 if [ "$THREADS" -le 0 ] 2>/dev/null; then
     if [ "$OS" = "Darwin" ]; then
@@ -111,7 +147,21 @@ say ""
 # Auto-restart on crash; clean exit (Ctrl+C) stops the loop.
 trap 'exit 0' INT TERM
 while true; do
-    "$BIN" -o "$POOL_URL" -u "$FULL_WORKER" -Threads "$THREADS" && break
+    if [ "$USE_PYTHON" = "1" ]; then
+        run_python_miner && break
+    else
+        if ! "$BIN" -o "$POOL_URL" -u "$FULL_WORKER" -Threads "$THREADS"; then
+            if needs_python_miner; then
+                say "Switching to Python miner (GLIBC/GLIBCXX too old for prebuilt binary)..."
+                USE_PYTHON=1
+                continue
+            fi
+            say "Miner exited unexpectedly - restarting in 10s (Ctrl+C to stop)..."
+            sleep 10
+            continue
+        fi
+        break
+    fi
     say "Miner exited unexpectedly - restarting in 10s (Ctrl+C to stop)..."
     sleep 10
 done
