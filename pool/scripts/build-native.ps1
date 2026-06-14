@@ -18,11 +18,11 @@ if (-not $cmake) { throw "cmake not found. Install CMake and add to PATH." }
 New-Item -ItemType Directory -Force -Path $BuildDir | Out-Null
 Push-Location $BuildDir
 try {
-    # Use Ninja (the MSVC env is already active via msvc-dev-cmd) instead of a
-    # pinned "Visual Studio 17 2022" generator — the runner image's VS version
-    # changes (now VS 18), and a hardcoded VS generator breaks on every bump.
-    cmake -G Ninja -DCMAKE_BUILD_TYPE=$BuildType "$Root\native"
-    cmake --build . --config $BuildType --target bz-pool-miner -j
+    # Use NMake Makefiles: it relies only on the MSVC env already activated by
+    # msvc-dev-cmd (nmake + cl). No pinned VS generator version (breaks on every
+    # runner VS bump) and no external ninja (version clashes with CMake). Robust.
+    cmake -G "NMake Makefiles" -DCMAKE_BUILD_TYPE=$BuildType "$Root\native"
+    cmake --build . --target bz-pool-miner
     # Ninja (single-config) writes directly into $BuildDir; VS generators use a
     # per-config subdir. Accept either layout.
     $exe = @(

@@ -17,8 +17,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ilammy/msvc-dev-cmd@v1
-      - name: Install CMake + Ninja
-        run: choco install cmake ninja -y
+      - name: Install CMake
+        run: choco install cmake -y
       - name: Install OpenSSL runtime
         run: choco install openssl.light -y --no-progress
       - name: Build bz-pool-miner
