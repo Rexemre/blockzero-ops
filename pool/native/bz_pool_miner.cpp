@@ -147,9 +147,13 @@ bool ApplyJob(const pool::MiningJob& mj) {
     auto prefix = pool::HexDecode(mj.header_prefix_hex);
     auto key = pool::HexDecode(mj.rx_key_hex);
     if (prefix.size() < 76 || key.size() != 32) {
-        std::cerr << "Ignored invalid job " << mj.job_id << "\n";
+        std::cerr << "Ignored invalid job " << mj.job_id << " (header=" << prefix.size()
+                  << "B key=" << key.size() << "B)\n";
         return false;
     }
+
+    std::cout << "New job: " << mj.job_id << " - mining.\n";
+    std::cout.flush();
 
     // Reuse the existing RandomX cache when the key is unchanged. Cache init
     // takes seconds; jobs change every block but the key only every epoch.
@@ -198,8 +202,6 @@ bool ApplyJob(const pool::MiningJob& mj) {
         }
     }
 
-    std::cout << "New job: " << mj.job_id << " - mining.\n";
-    std::cout.flush();
     return true;
 }
 

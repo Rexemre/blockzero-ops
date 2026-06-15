@@ -6,6 +6,7 @@
 #   ./mine-pool.sh bz1YOURADDRESS      # payout address only — rig name added automatically
 #   THREADS=8 ./mine-pool.sh            # custom thread count
 #   WORKER=rig2 ./mine-pool.sh bz1...   # optional custom rig name (default: hostname)
+#   USE_PYTHON=1 ./mine-pool.sh bz1...  # force Python miner (works if native stays at 0 H/s)
 #
 # First time? Create a wallet address with a local node:
 #   bitcoind -datadir=~/.blockzero-mainnet -daemon
@@ -129,7 +130,10 @@ run_python_miner() {
 }
 
 USE_PYTHON=0
-if needs_python_miner; then
+if [ "${USE_PYTHON:-0}" = "1" ]; then
+    say "Using Python pool miner (USE_PYTHON=1)."
+    USE_PYTHON=1
+elif needs_python_miner; then
     say ""
     say "Prebuilt bz-pool-miner needs a newer system libc (built for recent Ubuntu)."
     say "Using Python miner instead — same pool, same payouts."

@@ -40,7 +40,11 @@ void StratumClient::SetJobCallback(JobCallback cb) { on_job_ = std::move(cb); }
 bool StratumClient::IsConnected() const { return connected_.load(); }
 
 void StratumClient::SendHello() {
+    // Each Stratum line must be its own TCP record. ixwebsocket may coalesce rapid
+    // send() calls into one WebSocket frame; trailing newlines let the pool bridge
+    // split them even when they arrive in a single frame.
     SendLine("{\"id\":" + std::to_string(req_id_++) + ",\"method\":\"mining.subscribe\",\"params\":[]}");
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
     SendLine("{\"id\":" + std::to_string(req_id_++) + ",\"method\":\"mining.authorize\",\"params\":[\"" +
              JsonEscape(worker_) + "\",\"" + JsonEscape(password_) + "\"]}");
 }
@@ -106,7 +110,7 @@ void StratumClient::Stop() {
 void StratumClient::SendLine(const std::string& line) {
     if (!ws_) return;
     std::lock_guard<std::mutex> lock(send_mu_);
-    static_cast<ix::WebSocket*>(ws_)->send(line);
+    static_cast<ix::WebSocket*>(ws_)->send(line + "\n");
 }
 
 bool StratumClient::SubmitShare(const std::string& job_id, uint32_t nonce) {
@@ -164,7 +168,7 @@ std::string StratumClient::ExtractNotifyParam(const std::string& json, int index
     return {};
 }
 
-void StratumClient::OnMessage(const std::string& line) {
+void StratumClient::ProcessLine(const std::string& line) {
     if (line.find("mining.notify") != std::string::npos) {
         MiningJob job;
         job.job_id = ExtractNotifyParam(line, 0);
@@ -173,8 +177,15 @@ void StratumClient::OnMessage(const std::string& line) {
         job.pool_target_hex = ExtractNotifyParam(line, 4);
         const auto clean = ExtractNotifyParam(line, 7);
         job.clean = (clean == "true");
-        if (job.job_id.empty() || job.header_prefix_hex.empty() || job.rx_key_hex.empty()) return;
-        if (on_job_) on_job_(job);
+        if (job.job_id.empty() || job.header_prefix_hex.empty() || job.rx_key_hex.empty()) {
+            std::cerr << "Ignored malformed mining.notify (missing job fields)\n";
+            return;
+        }
+        if (on_job_) {
+            // RandomX init can take seconds; never block the websocket thread
+            // (also keeps server ping/pong handling responsive).
+            std::thread([cb = on_job_, job]() { cb(job); }).detach();
+        }
         return;
     }
 
@@ -205,6 +216,28 @@ void StratumClient::OnMessage(const std::string& line) {
         }
         std::cerr << "Share rejected: " << reason << "\n";
     }
+}
+
+void StratumClient::OnMessage(const std::string& raw) {
+    // Pool may deliver multiple JSON lines in one WebSocket text frame.
+    std::string line;
+    line.reserve(raw.size());
+    for (size_t i = 0; i < raw.size(); ++i) {
+        const char c = raw[i];
+        if (c == '\n' || c == '\r') {
+            if (!line.empty()) {
+                ProcessLine(line);
+                line.clear();
+            }
+            continue;
+        }
+        if (c == '{' && !line.empty() && line.back() == '}') {
+            ProcessLine(line);
+            line.clear();
+        }
+        line += c;
+    }
+    if (!line.empty()) ProcessLine(line);
 }
 
 } // namespace pool
