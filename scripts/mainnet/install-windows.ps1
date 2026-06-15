@@ -122,13 +122,10 @@ if ((Test-Path (Join-Path $BinDir "bitcoind.exe")) -and (Test-Path (Join-Path $B
 
 Ensure-MainnetConfig
 
-$WalletLauncher = Join-Path $BinDir "BlockZero Wallet.bat"
-@(
-    "@echo off"
-    "REM Block Zero mainnet GUI — uses BlockZeroMainnet, not the old Bitcoin datadir."
-    "start `"`" /D `"%~dp0`" `"%~dp0bitcoin-qt.exe`" -datadir=`"$env:LOCALAPPDATA\BlockZeroMainnet`""
-) | Set-Content -Path $WalletLauncher -Encoding ASCII
-Write-Host "Wallet launcher: $WalletLauncher"
+$LegacyLauncher = Join-Path $BinDir "BlockZero Wallet.bat"
+if (Test-Path $LegacyLauncher) {
+    Remove-Item $LegacyLauncher -Force
+}
 
 if (-not (Test-Path (Join-Path $BinDir "bitcoin-qt.exe"))) {
     Write-Warning "bitcoin-qt.exe not installed. Wallet GUI requires blockzero-*-windows-x64.zip (not -cli)."
@@ -136,8 +133,8 @@ if (-not (Test-Path (Join-Path $BinDir "bitcoin-qt.exe"))) {
 
 Write-Host ""
 Write-Host "Wallet GUI:"
-Write-Host "  Start-Process `"$WalletLauncher`""
-Write-Host "  (or double-click BlockZero Wallet.bat in $BinDir)"
+Write-Host "  Double-click bitcoin-qt.exe in $BinDir"
+Write-Host "  (uses %LOCALAPPDATA%\BlockZeroMainnet automatically — rc20+)"
 Write-Host ""
 Write-Host "Next steps (mainnet):"
 Write-Host "  .\mine-mainnet.ps1 -Pool          # pool mine (recommended)"
