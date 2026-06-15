@@ -127,6 +127,10 @@ if (-not (Test-Path (Join-Path $BinDir "bitcoin-qt.exe"))) {
 }
 
 Write-Host ""
+Write-Host "Wallet GUI:"
+Write-Host "  Start-Process `"$WalletLauncher`""
+Write-Host "  (or double-click BlockZero Wallet.bat in $BinDir)"
+Write-Host ""
 Write-Host "Next steps (mainnet):"
 Write-Host "  .\mine-mainnet.ps1 -Pool          # pool mine (recommended)"
 Write-Host "  .\mine-mainnet.ps1 -Pool -Threads 4"
