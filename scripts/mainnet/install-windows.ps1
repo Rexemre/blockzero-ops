@@ -112,7 +112,7 @@ if ((Test-Path (Join-Path $BinDir "bitcoind.exe")) -and (Test-Path (Join-Path $B
                 New-Item -ItemType Directory -Force -Path $destPlatforms | Out-Null
                 Copy-Item (Join-Path $platforms "*") $destPlatforms -Force
             }
-            Get-ChildItem $srcBin -Filter "Qt6*.dll" -ErrorAction SilentlyContinue | ForEach-Object {
+            Get-ChildItem $srcBin -Filter "*.dll" -ErrorAction SilentlyContinue | ForEach-Object {
                 Copy-Item $_.FullName $BinDir -Force
             }
         }
