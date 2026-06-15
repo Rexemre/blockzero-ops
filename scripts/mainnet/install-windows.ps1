@@ -53,6 +53,35 @@ function Get-ReleaseAssetUrl {
     return @{ Url = $asset.browser_download_url; Name = $asset.name; Tag = $rel.tag_name }
 }
 
+function Ensure-MainnetConfig {
+    $confDir = Join-Path $env:LOCALAPPDATA "BlockZeroMainnet"
+    $confPath = Join-Path $confDir "bitcoin.conf"
+    New-Item -ItemType Directory -Force -Path $confDir | Out-Null
+    if (Test-Path $confPath) {
+        $existing = Get-Content $confPath -Raw
+        if ($existing -match "addnode=217\.160\.46\.61:8210") {
+            Write-Host "Mainnet config OK: $confPath"
+            return
+        }
+        Add-Content -Path $confPath -Value "`naddnode=217.160.46.61:8210"
+        Write-Host "Added seed node to existing config: $confPath"
+        return
+    }
+    @(
+        "# Block Zero mainnet"
+        "server=1"
+        "txindex=1"
+        ""
+        "[main]"
+        "listen=1"
+        "rpcbind=127.0.0.1"
+        "rpcallowip=127.0.0.1"
+        "rpcport=8332"
+        "addnode=217.160.46.61:8210"
+    ) | Set-Content -Path $confPath -Encoding UTF8
+    Write-Host "Created mainnet config: $confPath"
+}
+
 Write-Host "Block Zero Windows installer"
 Write-Host "Install dir: $BinDir"
 Write-Host ""
@@ -63,6 +92,9 @@ if ((Test-Path (Join-Path $BinDir "bitcoind.exe")) -and (Test-Path (Join-Path $B
 } else {
     Stop-BitcoindIfRunning
     $info = Get-ReleaseAssetUrl -Ver $Version
+    if ($info.Name -match "-cli\.zip$") {
+        Write-Warning "Release has no GUI zip yet; installing CLI-only build (no bitcoin-qt.exe)."
+    }
     Write-Host "Downloading $($info.Name) ($($info.Tag))..."
     $zip = Join-Path $env:TEMP $info.Name
     Invoke-WebRequest -Uri $info.Url -OutFile $zip -UseBasicParsing
@@ -74,9 +106,24 @@ if ((Test-Path (Join-Path $BinDir "bitcoind.exe")) -and (Test-Path (Join-Path $B
             Get-ChildItem $srcBin -Filter "*.exe" | ForEach-Object {
                 Copy-Item $_.FullName $BinDir -Force
             }
+            $platforms = Join-Path $srcBin "platforms"
+            if (Test-Path $platforms) {
+                $destPlatforms = Join-Path $BinDir "platforms"
+                New-Item -ItemType Directory -Force -Path $destPlatforms | Out-Null
+                Copy-Item (Join-Path $platforms "*") $destPlatforms -Force
+            }
+            Get-ChildItem $srcBin -Filter "Qt6*.dll" -ErrorAction SilentlyContinue | ForEach-Object {
+                Copy-Item $_.FullName $BinDir -Force
+            }
         }
     }
     Write-Host "Installed to $BinDir"
+}
+
+Ensure-MainnetConfig
+
+if (-not (Test-Path (Join-Path $BinDir "bitcoin-qt.exe"))) {
+    Write-Warning "bitcoin-qt.exe not installed. Wallet GUI requires blockzero-*-windows-x64.zip (not -cli)."
 }
 
 Write-Host ""
