@@ -25,6 +25,11 @@
 #include <thread>
 #include <vector>
 
+#ifndef _WIN32
+#include <sys/wait.h>
+#include <unistd.h>
+#endif
+
 namespace {
 
 constexpr int kMaxThreads = 64;
@@ -45,6 +50,67 @@ struct RxDataset {
     }
 };
 
+constexpr uint8_t kRxProbeKey[32] = {
+    0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x5a, 0x65, 0x72, 0x6f, 0x2d, 0x52, 0x61, 0x6e,
+    0x64, 0x6f, 0x6d, 0x58, 0x2d, 0x62, 0x6f, 0x6f, 0x74, 0x73, 0x74, 0x72, 0x61,
+    0x70, 0x2d, 0x6b, 0x65, 0x79, 0x76,
+};
+
+bool ProbeJitDirect(randomx_flags flags) {
+    if (!(flags & RANDOMX_FLAG_JIT)) return true;
+    randomx_cache* cache = randomx_alloc_cache(flags);
+    if (!cache) return false;
+    randomx_init_cache(cache, kRxProbeKey, sizeof(kRxProbeKey));
+    randomx_vm* vm = randomx_create_vm(flags, cache, nullptr);
+    if (!vm) {
+        randomx_release_cache(cache);
+        return false;
+    }
+    uint8_t hash[32];
+    uint8_t header[80]{};
+    randomx_calculate_hash(vm, header, sizeof(header), hash);
+    randomx_destroy_vm(vm);
+    randomx_release_cache(cache);
+    return true;
+}
+
+bool ProbeJitRuntime(randomx_flags flags) {
+#ifndef _WIN32
+    if (!(flags & RANDOMX_FLAG_JIT)) return true;
+    const pid_t pid = fork();
+    if (pid == 0) {
+        _exit(ProbeJitDirect(flags) ? 0 : 1);
+    }
+    if (pid < 0) return false;
+    int status = 0;
+    if (waitpid(pid, &status, 0) < 0) return false;
+    return WIFEXITED(status) && WEXITSTATUS(status) == 0;
+#else
+    return ProbeJitDirect(flags);
+#endif
+}
+
+randomx_vm* CreateMiningVm(randomx_flags flags, randomx_cache* cache, randomx_dataset* dataset) {
+    if (!cache) return nullptr;
+    randomx_vm* vm = nullptr;
+    if (dataset) {
+        vm = randomx_create_vm(static_cast<randomx_flags>(flags | RANDOMX_FLAG_FULL_MEM), nullptr, dataset);
+    }
+    if (!vm) {
+        vm = randomx_create_vm(flags, cache, nullptr);
+    }
+    if (!vm && (flags & RANDOMX_FLAG_JIT)) {
+        const randomx_flags soft =
+            static_cast<randomx_flags>(flags & ~(RANDOMX_FLAG_JIT | RANDOMX_FLAG_SECURE));
+        if (dataset) {
+            vm = randomx_create_vm(static_cast<randomx_flags>(soft | RANDOMX_FLAG_FULL_MEM), nullptr,
+                                   dataset);
+        }
+        if (!vm) vm = randomx_create_vm(soft, cache, nullptr);
+    }
+    return vm;
+}
+
 randomx_flags MiningFlags() {
     // Determined once: JIT is ~10x faster than the interpreter. On Windows the
     // SECURE flag keeps JIT pages W^X-safe (plain JIT crashes under DEP).
@@ -56,13 +122,10 @@ randomx_flags MiningFlags() {
         }
 #endif
         if (flags & RANDOMX_FLAG_JIT) {
-            randomx_cache* probe = randomx_alloc_cache(flags);
-            if (probe) {
-                randomx_release_cache(probe);
-            } else {
-                // JIT allocation refused (hardened system) - interpreter fallback.
-                flags = static_cast<randomx_flags>(
-                    flags & ~(RANDOMX_FLAG_JIT | RANDOMX_FLAG_SECURE));
+            if (!ProbeJitRuntime(flags)) {
+                std::cout << "RandomX JIT unavailable here - using interpreter (slower but stable).\n";
+                std::cout.flush();
+                flags = static_cast<randomx_flags>(flags & ~(RANDOMX_FLAG_JIT | RANDOMX_FLAG_SECURE));
             }
         }
         return flags;
@@ -81,6 +144,7 @@ struct ActiveJob {
 };
 
 std::mutex g_job_mu;
+std::mutex g_apply_mu;
 ActiveJob g_job;
 
 std::mutex g_ds_mu;
@@ -144,6 +208,8 @@ void BuildDatasetAsync(std::shared_ptr<RxCache> cache, std::string key_hex, rand
 }
 
 bool ApplyJob(const pool::MiningJob& mj) {
+    std::lock_guard<std::mutex> apply_lock(g_apply_mu);
+
     auto prefix = pool::HexDecode(mj.header_prefix_hex);
     auto key = pool::HexDecode(mj.rx_key_hex);
     if (prefix.size() < 76 || key.size() != 32) {
@@ -151,9 +217,6 @@ bool ApplyJob(const pool::MiningJob& mj) {
                   << "B key=" << key.size() << "B)\n";
         return false;
     }
-
-    std::cout << "New job: " << mj.job_id << " - mining.\n";
-    std::cout.flush();
 
     // Reuse the existing RandomX cache when the key is unchanged. Cache init
     // takes seconds; jobs change every block but the key only every epoch.
@@ -202,6 +265,8 @@ bool ApplyJob(const pool::MiningJob& mj) {
         }
     }
 
+    std::cout << "New job: " << mj.job_id << " - mining.\n";
+    std::cout.flush();
     return true;
 }
 
@@ -253,16 +318,11 @@ void GrindThread(int thread_id, int thread_count) {
                 std::lock_guard<std::mutex> lock(g_ds_mu);
                 if (g_dataset && g_dataset_key == key_hex) vm_dataset = g_dataset;
             }
-            if (vm_dataset) {
-                vm = randomx_create_vm(static_cast<randomx_flags>(flags | RANDOMX_FLAG_FULL_MEM),
-                                       nullptr, vm_dataset->ptr);
-            }
+            vm = CreateMiningVm(flags, cache_holder->ptr, vm_dataset ? vm_dataset->ptr : nullptr);
             if (!vm) {
                 vm_dataset.reset();
-                vm = randomx_create_vm(flags, cache_holder->ptr, nullptr);
-            }
-            if (!vm) {
                 std::cerr << "RandomX VM init failed on thread " << thread_id << "\n";
+                std::cerr.flush();
                 std::this_thread::sleep_for(std::chrono::milliseconds(250));
                 continue;
             }
