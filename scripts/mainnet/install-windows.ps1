@@ -122,6 +122,14 @@ if ((Test-Path (Join-Path $BinDir "bitcoind.exe")) -and (Test-Path (Join-Path $B
 
 Ensure-MainnetConfig
 
+$WalletLauncher = Join-Path $BinDir "BlockZero Wallet.bat"
+@(
+    "@echo off"
+    "REM Block Zero mainnet GUI — uses BlockZeroMainnet, not the old Bitcoin datadir."
+    "start `"`" /D `"%~dp0`" `"%~dp0bitcoin-qt.exe`" -datadir=`"$env:LOCALAPPDATA\BlockZeroMainnet`""
+) | Set-Content -Path $WalletLauncher -Encoding ASCII
+Write-Host "Wallet launcher: $WalletLauncher"
+
 if (-not (Test-Path (Join-Path $BinDir "bitcoin-qt.exe"))) {
     Write-Warning "bitcoin-qt.exe not installed. Wallet GUI requires blockzero-*-windows-x64.zip (not -cli)."
 }
