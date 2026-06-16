@@ -1,8 +1,8 @@
 # BLOCK ZERO · Ops
 
-### Missed 2009? **Start at Block Zero.**
+### **Mine with your CPU** — not a warehouse. **Start at Block Zero.**
 
-Infrastructure, release tooling, and runbooks for the Block Zero network.
+Official mainnet scripts — pool mining in one command. **RandomX** = your processor counts; ASIC & GPU farms don't.
 
 Fair launch. Proof-of-work. No presale. No insiders.
 
@@ -89,7 +89,7 @@ Pool dashboard: https://pool.bloz.org
 |---|---|
 | **Website** | https://bloz.org |
 | **Pool** | https://pool.bloz.org |
-| **Explorer** | https://explorer.bloz.org · testnet: https://texplorer.bloz.org |
+| **Explorer** | https://explorer.bloz.org |
 | **Bridge** | https://bridge.bloz.org |
 | **Discord** | https://discord.gg/FbJzrwAU2W |
 | **X (Twitter)** | https://x.com/Block_Zero_2009 |
