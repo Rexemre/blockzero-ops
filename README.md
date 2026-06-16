@@ -1,28 +1,27 @@
 # BLOCK ZERO · Ops
 
-**Modern BTC code. A second chance at Genesis.**
+### Missed 2009? **Start at Block Zero.**
 
 Infrastructure, release tooling, and runbooks for the Block Zero network.
 
 Fair launch. Proof-of-work. No presale. No insiders.
 
+**👉 New here? [Join Discord →](https://discord.gg/FbJzrwAU2W)** · **⛏ [pool.bloz.org](https://pool.bloz.org)** · **🌐 [bloz.org](https://bloz.org)**
+
 ---
 
-## Official links
+## Start in 3 steps
 
-| | |
-|---|---|
-| **Website** | https://bloz.org |
-| **Pool** | https://pool.bloz.org *(test release)* |
-| **Explorer** | https://explorer.bloz.org · testnet: https://texplorer.bloz.org |
-| **Bridge** | https://bridge.bloz.org |
-| **Discord** | https://discord.gg/FbJzrwAU2W |
-| **X (Twitter)** | https://x.com/Block_Zero_2009 |
-| **Full list** | [official-links.md](https://github.com/Rexemre/blockzero-docs/blob/main/official-links.md) |
+1. **Wallet** — [Windows rc24](https://github.com/Rexemre/blockzero-core/releases/tag/v1.0.0-rc24) → get a `bz1…` address
+2. **Pool mine (recommended)** — clone this repo, run:
+   ```bash
+   cd scripts/mainnet
+   ./mine-pool.sh bz1YOURADDRESS          # Linux / macOS
+   ```
+   Windows: `.\install-windows.ps1` → `.\mine-mainnet.ps1 -Pool`
+3. **Help** — **[Discord](https://discord.gg/FbJzrwAU2W)** · pool stats at [pool.bloz.org](https://pool.bloz.org)
 
-**Mainnet seed:** `217.160.46.61:8210`
-
-> **Warning:** Copycat sites (e.g. `.cc` domains) and third-party pools are **not affiliated** with Block Zero — we have no insight into their code and accept **no liability** for malware, wrong-chain mining, fraud, or unfair pool payouts. [Read the full warning →](https://github.com/Rexemre/blockzero-docs/blob/main/official-links.md#warning-copycat-sites--unofficial-services)
+Latest pool miner: **[pool-miner-v0.6.9](https://github.com/Rexemre/blockzero-ops/releases/tag/pool-miner-v0.6.9)** · `FORCE=1 ./mine-pool.sh` pulls it automatically.
 
 ---
 
@@ -79,7 +78,24 @@ Pool dashboard: https://pool.bloz.org
 
 - Public seed nodes and network bootstrap (mainnet + testnet)
 - Release checklists and CI
+- Pool miner builds ([pool-miner-v* releases](https://github.com/Rexemre/blockzero-ops/releases))
 - Monitoring, incident response, postmortems
+
+---
+
+## Official links
+
+| | |
+|---|---|
+| **Website** | https://bloz.org |
+| **Pool** | https://pool.bloz.org |
+| **Explorer** | https://explorer.bloz.org · testnet: https://texplorer.bloz.org |
+| **Bridge** | https://bridge.bloz.org |
+| **Discord** | https://discord.gg/FbJzrwAU2W |
+| **X (Twitter)** | https://x.com/Block_Zero_2009 |
+| **Full list** | [official-links.md](https://github.com/Rexemre/blockzero-docs/blob/main/official-links.md) |
+
+**Mainnet seed:** `217.160.46.61:8210`
 
 ---
 
@@ -90,4 +106,7 @@ Pool dashboard: https://pool.bloz.org
 | [blockzero-core](https://github.com/Rexemre/blockzero-core) | Node & chain |
 | [blockzero-docs](https://github.com/Rexemre/blockzero-docs) | Documentation |
 | **blockzero-ops** (here) | Scripts & infrastructure |
-| [blockzero-wallet](https://github.com/Rexemre/blockzero-wallet) | Wallet (in development) |
+| [blockzero-wallet](https://github.com/Rexemre/blockzero-wallet) | Wallet guides |
+| [blockzero-bridge](https://github.com/Rexemre/blockzero-bridge) | wBLOZ bridge |
+
+> **Warning:** Copycat sites (e.g. `.cc` domains) and third-party pools are **not affiliated** with Block Zero — we have no insight into their code and accept **no liability** for malware, wrong-chain mining, fraud, or unfair pool payouts. [Read the full warning →](https://github.com/Rexemre/blockzero-docs/blob/main/official-links.md#warning-copycat-sites--unofficial-services)
