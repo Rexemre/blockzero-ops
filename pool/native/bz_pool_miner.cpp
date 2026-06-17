@@ -19,20 +19,66 @@
 #include <csignal>
 #include <cstdio>
 #include <cstring>
+#include <fstream>
 #include <iostream>
 #include <memory>
 #include <mutex>
+#include <string>
 #include <thread>
 #include <vector>
 
-#ifndef _WIN32
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#elif defined(__APPLE__)
+#include <sys/sysctl.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#else
 #include <sys/wait.h>
 #include <unistd.h>
 #endif
 
 namespace {
 
+constexpr const char* kMinerVersion = "0.7.0";
 constexpr int kMaxThreads = 64;
+
+// Fast mode builds a ~2080 MiB RandomX dataset. Add the per-epoch cache (256 MiB),
+// per-thread scratchpads and OS headroom: require ~3 GiB available before we try.
+// On a smaller box the dataset alloc/init thrashes swap and freezes the grind
+// threads (0 H/s, stuck on the "light" label) - genuine light mode is far better.
+constexpr uint64_t kFastModeMinMiB = 3072;
+
+// Physically available RAM in MiB, or 0 when it cannot be determined.
+uint64_t AvailableMemoryMiB() {
+#ifdef _WIN32
+    MEMORYSTATUSEX st;
+    st.dwLength = sizeof(st);
+    if (GlobalMemoryStatusEx(&st)) {
+        return static_cast<uint64_t>(st.ullAvailPhys) / (1024ULL * 1024ULL);
+    }
+    return 0;
+#elif defined(__APPLE__)
+    // No cheap "available" metric; total RAM is a safe proxy on Apple Silicon.
+    uint64_t total = 0;
+    size_t len = sizeof(total);
+    if (sysctlbyname("hw.memsize", &total, &len, nullptr, 0) == 0) {
+        return total / (1024ULL * 1024ULL);
+    }
+    return 0;
+#else
+    std::ifstream meminfo("/proc/meminfo");
+    std::string key, unit;
+    uint64_t value = 0;
+    while (meminfo >> key >> value >> unit) {
+        if (key == "MemAvailable:") return value / 1024ULL; // kB -> MiB
+    }
+    return 0;
+#endif
+}
 
 struct RxCache {
     randomx_cache* ptr{nullptr};
@@ -474,6 +520,18 @@ int main(int argc, char* argv[]) {
     }
     g_threads = threads;
 
+    // Don't attempt the 2 GB fast-mode dataset on machines that can't hold it.
+    // Trying anyway thrashes swap and freezes mining at 0 H/s on small VPS.
+    if (g_fast_mode) {
+        const uint64_t avail = AvailableMemoryMiB();
+        if (avail > 0 && avail < kFastModeMinMiB) {
+            std::cout << "Only ~" << avail << " MiB RAM available - using light mode "
+                         "(fast mode needs ~3 GB). Slower but stable.\n";
+            std::cout.flush();
+            g_fast_mode = false;
+        }
+    }
+
     if (worker.find("bz1") != 0 || worker.find('.') == std::string::npos) {
         std::fprintf(stderr, "Worker must be bz1ADDRESS.rigname (got: %s)\n", worker.c_str());
         std::fprintf(stderr, "Delete miner.conf and run again, or fix BZ1_ADDRESS.\n");
@@ -482,11 +540,18 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    const randomx_flags diag_flags = MiningFlags();
+    const uint64_t diag_ram = AvailableMemoryMiB();
+    std::cout << "bz-pool-miner v" << kMinerVersion << "\n";
     std::cout << "Connecting to pool...\n";
     std::cout << "Pool:    " << url << "\n";
     std::cout << "Worker:  " << worker << "\n";
     std::cout << "Threads: " << threads << "\n";
     std::cout << "Mode:    " << (g_fast_mode ? "fast (RandomX dataset)" : "light") << "\n";
+    std::cout << "RandomX: JIT=" << ((diag_flags & RANDOMX_FLAG_JIT) ? "on" : "off")
+              << " HARD_AES=" << ((diag_flags & RANDOMX_FLAG_HARD_AES) ? "on" : "off")
+              << " | RAM avail: " << (diag_ram ? std::to_string(diag_ram) + " MiB" : "unknown")
+              << " | cores: " << std::thread::hardware_concurrency() << "\n";
     std::cout << "Config:  " << conf_path << "\n";
     std::cout << "Press Ctrl+C to stop.\n\n";
     std::cout.flush();

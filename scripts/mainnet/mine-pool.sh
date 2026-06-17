@@ -6,6 +6,7 @@
 #   ./mine-pool.sh bz1YOURADDRESS      # payout address only — rig name added automatically
 #   THREADS=8 ./mine-pool.sh            # custom thread count
 #   WORKER=rig2 ./mine-pool.sh bz1...   # optional custom rig name (default: hostname)
+#   LIGHT=1 ./mine-pool.sh bz1...       # force light mode (use on low-RAM machines / 0 H/s)
 #   USE_PYTHON=1 ./mine-pool.sh bz1...  # force Python miner (works if native stays at 0 H/s)
 #
 # First time? Create a wallet address with a local node:
@@ -129,6 +130,33 @@ run_python_miner() {
         -o "$POOL_URL" -u "$FULL_WORKER" -t "$THREADS"
 }
 
+# Run the native miner but watch its output: if it never reports a non-zero
+# hashrate within ~90s, the native RandomX path is broken on this machine
+# (JIT crash, low RAM, odd CPU). Kill it and signal the caller to use the
+# Python miner, which always works. Returns 99 in that case.
+run_native_with_watchdog() {
+    local logf; logf="$(mktemp)"
+    "$BIN" -o "$POOL_URL" -u "$FULL_WORKER" -Threads "$THREADS" $LIGHT_FLAG > >(tee "$logf") 2>&1 &
+    local pid=$!
+    local i=0
+    while kill -0 "$pid" 2>/dev/null; do
+        if grep -qE 'Hashrate: [1-9][0-9]* H/s' "$logf"; then
+            local rc=0; wait "$pid" || rc=$?; rm -f "$logf"; return "$rc"
+        fi
+        i=$((i + 1))
+        if [ "$i" -ge 90 ]; then
+            say ""
+            say "Native miner stuck at 0 H/s for ~90s - switching to the Python miner (always works)."
+            kill "$pid" 2>/dev/null || true
+            wait "$pid" 2>/dev/null || true
+            rm -f "$logf"
+            return 99
+        fi
+        sleep 1
+    done
+    local rc=0; wait "$pid" 2>/dev/null || rc=$?; rm -f "$logf"; return "$rc"
+}
+
 USE_PYTHON=0
 if [ "${USE_PYTHON:-0}" = "1" ]; then
     say "Using Python pool miner (USE_PYTHON=1)."
@@ -152,10 +180,31 @@ fi
 
 FULL_WORKER="$ADDRESS.$WORKER"
 
+# ---------- fast vs light mode ----------
+# Fast mode builds a ~2 GB RandomX dataset. On a small VPS that allocation/init
+# thrashes swap and freezes mining at 0 H/s (the miner stays stuck on the
+# "light" label and never hashes). Use real light mode when RAM is short.
+LIGHT_FLAG=""
+if [ "${LIGHT:-0}" = "1" ]; then
+    LIGHT_FLAG="--light"
+    say "Light mode forced (LIGHT=1)."
+else
+    if [ "$OS" = "Darwin" ]; then
+        AVAIL_MIB="$(( $(sysctl -n hw.memsize 2>/dev/null || echo 0) / 1048576 ))"
+    else
+        AVAIL_MIB="$(awk '/MemAvailable/ {print int($2/1024); exit}' /proc/meminfo 2>/dev/null || echo 0)"
+    fi
+    if [ "${AVAIL_MIB:-0}" -gt 0 ] && [ "$AVAIL_MIB" -lt 3072 ]; then
+        LIGHT_FLAG="--light"
+        say "Only ${AVAIL_MIB} MiB RAM available - using light mode (fast mode needs ~3 GB)."
+    fi
+fi
+
 say ""
 say "Pool:    $POOL_URL"
 say "Worker:  $FULL_WORKER"
 say "Threads: $THREADS"
+say "Mode:    $([ -n "$LIGHT_FLAG" ] && echo light || echo 'fast (RandomX dataset)')"
 say "Dashboard: https://pool.bloz.org  (enter your bz1 address under 'Your stats')"
 say "Press Ctrl+C to stop."
 say ""
@@ -165,8 +214,17 @@ trap 'exit 0' INT TERM
 while true; do
     if [ "$USE_PYTHON" = "1" ]; then
         run_python_miner && break
+        say "Python miner exited - restarting in 10s (Ctrl+C to stop)..."
+        sleep 10
+        continue
     else
-        if ! "$BIN" -o "$POOL_URL" -u "$FULL_WORKER" -Threads "$THREADS"; then
+        rc=0
+        run_native_with_watchdog && rc=0 || rc=$?
+        if [ "$rc" -eq 99 ]; then
+            USE_PYTHON=1
+            continue
+        fi
+        if [ "$rc" -ne 0 ]; then
             if needs_python_miner; then
                 say "Switching to Python miner (GLIBC/GLIBCXX too old for prebuilt binary)..."
                 USE_PYTHON=1
@@ -178,6 +236,4 @@ while true; do
         fi
         break
     fi
-    say "Miner exited unexpectedly - restarting in 10s (Ctrl+C to stop)..."
-    sleep 10
 done

@@ -18,6 +18,7 @@ param(
     [int]$Threads = 0,
     [switch]$Status,
     [switch]$Install,
+    [switch]$Light,
     [switch]$Force
 )
 
@@ -151,17 +152,33 @@ $t = Get-ThreadCount
 Save-PoolConfig $Address $WorkerName $t
 $worker = "$Address.$WorkerName"
 
+# Fast mode builds a ~2 GB RandomX dataset. On a low-RAM machine that thrashes
+# and freezes mining at 0 H/s. Use light mode when memory is short (or -Light).
+$useLight = $Light.IsPresent
+if (-not $useLight) {
+    try {
+        $availMiB = [int]((Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1024)
+        if ($availMiB -gt 0 -and $availMiB -lt 3072) {
+            $useLight = $true
+            Write-Host "Only $availMiB MiB RAM available - using light mode (fast mode needs ~3 GB)."
+        }
+    } catch {}
+}
+
+$minerArgs = @("-o", $PoolUrl, "-u", $worker, "-Threads", "$t")
+if ($useLight) { $minerArgs += "--light" }
+
 Show-PoolStatus
 Write-Host ""
 Write-Host "Payout address (BlockZero wallet): $Address"
 Write-Host "Starting pool miner..."
-Write-Host "Worker: $worker | Threads: $t"
+Write-Host "Worker: $worker | Threads: $t | Mode: $(if ($useLight) { 'light' } else { 'fast' })"
 Write-Host "Press Ctrl+C to stop."
 Write-Host ""
 
 Push-Location $BinDir
 try {
-    & $ExePath -o $PoolUrl -u $worker -Threads $t
+    & $ExePath @minerArgs
 } finally {
     Pop-Location
 }
