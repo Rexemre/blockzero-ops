@@ -21,7 +21,7 @@ Fair launch. Proof-of-work. No presale. No insiders.
    Windows: `.\install-windows.ps1` → `.\mine-mainnet.ps1 -Pool`
 3. **Help** — **[Discord](https://discord.gg/FbJzrwAU2W)** · pool stats at [pool.bloz.org](https://pool.bloz.org)
 
-Latest pool miner: **[pool-miner-v0.7.2](https://github.com/Rexemre/blockzero-ops/releases/tag/pool-miner-v0.7.2)** · `FORCE=1 ./mine-pool.sh` pulls it automatically.
+Latest pool miner: **[pool-miner-v0.7.3](https://github.com/Rexemre/blockzero-ops/releases/tag/pool-miner-v0.7.3)** · `FORCE=1 ./mine-pool.sh` pulls it automatically.
 
 ---
 

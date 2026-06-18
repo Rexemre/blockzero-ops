@@ -36,6 +36,7 @@ private:
     void OnMessage(const std::string& raw);
     void ProcessLine(const std::string& line);
     void SendHello();
+    void NoJobWatchdog();
     void SendLine(const std::string& line);
     static std::string ExtractNotifyParam(const std::string& json, int index);
 

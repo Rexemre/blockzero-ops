@@ -189,9 +189,10 @@ run_python_miner() {
         -o "$POOL_URL" -u "$FULL_WORKER" -t "$THREADS"
 }
 
-# Run the native miner but watch its output. Switch to the Python miner when:
-#   - no job arrives within ~90s ("Waiting for work" forever), or
-#   - a job arrived but hashrate stays 0 for ~90s (broken RandomX path).
+# Run the native miner (the FAST path: fast-mode dataset + JIT, ~10x the Python
+# miner). The binary self-heals job delivery by reconnecting, so we only fall
+# back to the slow Python miner as a true last resort: no job AND no hashrate at
+# all after ~180s, which means RandomX is genuinely broken on this machine.
 # Returns 99 to signal the caller to use the Python miner.
 run_native_with_watchdog() {
     local logf; logf="$(mktemp)"
@@ -199,17 +200,14 @@ run_native_with_watchdog() {
     local pid=$!
     local i=0
     while kill -0 "$pid" 2>/dev/null; do
-        if grep -qE 'New job:|Share found|Hashrate: [1-9][0-9]* H/s' "$logf"; then
+        # Once it is mining, stay on the fast native miner and just wait it out.
+        if grep -qE 'Share found|Hashrate: [1-9][0-9]* H/s' "$logf"; then
             local rc=0; wait "$pid" || rc=$?; rm -f "$logf"; return "$rc"
         fi
         i=$((i + 1))
-        if [ "$i" -ge 90 ]; then
+        if [ "$i" -ge 180 ]; then
             say ""
-            if grep -qE 'Connected to pool|Subscribed and authorized' "$logf"; then
-                say "Native miner connected but received no work within ~90s - switching to Python miner."
-            else
-                say "Native miner stuck at 0 H/s for ~90s - switching to Python miner."
-            fi
+            say "Native miner produced no hashrate in ~180s - falling back to Python miner."
             kill "$pid" 2>/dev/null || true
             wait "$pid" 2>/dev/null || true
             rm -f "$logf"

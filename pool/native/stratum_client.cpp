@@ -58,6 +58,9 @@ bool StratumClient::Start() {
     ix::SocketTLSOptions tls;
     tls.caFile = "SYSTEM";
     ws->setTLSOptions(tls);
+    // permessage-deflate negotiation with the Python websockets bridge can drop
+    // the very first mining.notify on some networks; plain frames are reliable.
+    ws->disablePerMessageDeflate();
     ws->enableAutomaticReconnection();
     ws->setMinWaitBetweenReconnectionRetries(2000);
     ws->setMaxWaitBetweenReconnectionRetries(30000);
@@ -70,6 +73,12 @@ bool StratumClient::Start() {
             // Re-subscribe + authorize on every (re)connect so mining resumes
             // automatically after network drops or pool restarts.
             SendHello();
+            // Until the first job arrives, watch the connection and force a fresh
+            // reconnect if the pool stays silent (a brand-new connection reliably
+            // delivers work). Avoids the slow Python fallback for a transient miss.
+            if (jobs_received_.load() == 0) {
+                std::thread([this]() { NoJobWatchdog(); }).detach();
+            }
         } else if (msg->type == ix::WebSocketMessageType::Message) {
             OnMessage(msg->str);
         } else if (msg->type == ix::WebSocketMessageType::Error) {
@@ -94,19 +103,30 @@ bool StratumClient::Start() {
     } else {
         std::cout << "Connected to pool - waiting for first job...\n";
         std::cout.flush();
-        // Some networks drop the first notify; re-subscribe if nothing arrives.
-        std::thread([this]() {
-            for (int attempt = 0; attempt < 6 && !jobs_received_.load(); ++attempt) {
-                std::this_thread::sleep_for(std::chrono::seconds(15));
-                if (jobs_received_.load() || !connected_.load()) return;
-                std::cout << "No job yet - re-subscribing to pool (attempt " << (attempt + 2)
-                          << ")...\n";
-                std::cout.flush();
-                SendHello();
-            }
-        }).detach();
     }
     return true;
+}
+
+void StratumClient::NoJobWatchdog() {
+    int waited = 0;
+    while (connected_.load() && jobs_received_.load() == 0) {
+        std::this_thread::sleep_for(std::chrono::seconds(5));
+        if (jobs_received_.load() != 0 || !connected_.load()) return;
+        waited += 5;
+        if (waited == 10) {
+            std::cout << "No job yet - re-subscribing to pool...\n";
+            std::cout.flush();
+            SendHello();
+        }
+        if (waited >= 20) {
+            std::cout << "Still no job - reconnecting to pool for fresh work...\n";
+            std::cout.flush();
+            // Force-close: ixwebsocket auto-reconnects, the Open callback runs
+            // SendHello() again and starts a new watchdog.
+            if (ws_) static_cast<ix::WebSocket*>(ws_)->close();
+            return;
+        }
+    }
 }
 
 void StratumClient::Stop() {
