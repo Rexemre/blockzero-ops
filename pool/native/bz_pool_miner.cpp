@@ -43,7 +43,7 @@
 
 namespace {
 
-constexpr const char* kMinerVersion = "0.7.0";
+constexpr const char* kMinerVersion = "0.7.1";
 constexpr int kMaxThreads = 64;
 
 // Fast mode builds a ~2080 MiB RandomX dataset. Add the per-epoch cache (256 MiB),
@@ -413,8 +413,28 @@ void ReportThread() {
             std::lock_guard<std::mutex> lock(g_ds_mu);
             fast = static_cast<bool>(g_dataset);
         }
+        bool have_job;
+        {
+            std::lock_guard<std::mutex> lock(g_job_mu);
+            have_job = static_cast<bool>(g_job.cache);
+        }
         const uint64_t acc = g_client ? g_client->AcceptedShares() : 0;
         const uint64_t rej = g_client ? g_client->RejectedShares() : 0;
+
+        // Avoid the confusing "0 H/s (light)" during start-up. Tell the user
+        // exactly what the miner is doing so nobody thinks it is broken.
+        if (!have_job) {
+            std::printf("Connected - waiting for first job from pool...\n");
+            std::fflush(stdout);
+            continue;
+        }
+        if (g_fast_mode && !fast && g_dataset_building.load()) {
+            std::printf("Building RandomX dataset (fast mode, ~1 min) - hashrate jumps when ready. "
+                        "Current: %.0f H/s | shares: %llu accepted\n",
+                        rate, static_cast<unsigned long long>(acc));
+            std::fflush(stdout);
+            continue;
+        }
         std::printf("Hashrate: %.0f H/s (%s) | shares: %llu accepted",
                     rate, fast ? "fast" : "light",
                     static_cast<unsigned long long>(acc));
