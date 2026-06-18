@@ -49,6 +49,7 @@ private:
     int req_id_{1};
     void* ws_{nullptr}; // ix::WebSocket*
     std::atomic<bool> connected_{false};
+    std::atomic<uint64_t> jobs_received_{0};
     std::atomic<uint64_t> accepted_{0};
     std::atomic<uint64_t> rejected_{0};
 };

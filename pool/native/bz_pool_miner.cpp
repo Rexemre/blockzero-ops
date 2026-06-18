@@ -43,7 +43,7 @@
 
 namespace {
 
-constexpr const char* kMinerVersion = "0.7.1";
+constexpr const char* kMinerVersion = "0.7.2";
 constexpr int kMaxThreads = 64;
 
 // Fast mode builds a ~2080 MiB RandomX dataset. Add the per-epoch cache (256 MiB),

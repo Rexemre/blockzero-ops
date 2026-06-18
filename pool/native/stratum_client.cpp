@@ -92,8 +92,19 @@ bool StratumClient::Start() {
         // Keep the websocket alive - automatic reconnection continues in the
         // background and mining starts as soon as the pool is reachable.
     } else {
-        std::cout << "Subscribed and authorized. Waiting for work...\n";
+        std::cout << "Connected to pool - waiting for first job...\n";
         std::cout.flush();
+        // Some networks drop the first notify; re-subscribe if nothing arrives.
+        std::thread([this]() {
+            for (int attempt = 0; attempt < 6 && !jobs_received_.load(); ++attempt) {
+                std::this_thread::sleep_for(std::chrono::seconds(15));
+                if (jobs_received_.load() || !connected_.load()) return;
+                std::cout << "No job yet - re-subscribing to pool (attempt " << (attempt + 2)
+                          << ")...\n";
+                std::cout.flush();
+                SendHello();
+            }
+        }).detach();
     }
     return true;
 }
@@ -181,6 +192,7 @@ void StratumClient::ProcessLine(const std::string& line) {
             std::cerr << "Ignored malformed mining.notify (missing job fields)\n";
             return;
         }
+        jobs_received_.fetch_add(1, std::memory_order_relaxed);
         if (on_job_) {
             // RandomX init can take seconds; never block the websocket thread
             // (also keeps server ping/pong handling responsive).
