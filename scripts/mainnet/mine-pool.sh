@@ -111,22 +111,55 @@ needs_python_miner() {
 
 ensure_python_miner() {
     local py_dir="$INSTALL_DIR/python-miner"
+    local venv="$INSTALL_DIR/python-venv"
     if [ ! -f "$py_dir/miner/blockzero-miner.py" ]; then
         say "Setting up Python pool miner (compatible with older Linux)..."
         mkdir -p "$py_dir"
         curl -fsSL "https://codeload.github.com/$POOL_REPO/tar.gz/refs/heads/main" \
             | tar -xz -C "$py_dir" --strip-components=1
     fi
-    if ! python3 -c "import randomx, websocket" 2>/dev/null; then
-        say "Installing Python deps (randomx, websocket-client)..."
-        python3 -m pip install --user -q -r "$py_dir/requirements.txt" \
-            || python3 -m pip install -q -r "$py_dir/requirements.txt"
+    if [ -x "$venv/bin/python3" ] && "$venv/bin/python3" -c "import randomx, websocket" 2>/dev/null; then
+        return 0
+    fi
+    if python3 -c "import randomx, websocket" 2>/dev/null; then
+        return 0
+    fi
+
+    say "Installing Python deps (randomx, websocket-client)..."
+    if ! python3 -c "import venv" 2>/dev/null; then
+        if command -v apt-get >/dev/null 2>&1; then
+            say "Installing python3-venv (Debian/Ubuntu, one-time)..."
+            apt-get install -y -qq python3-venv python3-full 2>/dev/null \
+                || apt-get install -y python3-venv python3-full
+        fi
+    fi
+    if python3 -m venv "$venv" 2>/dev/null; then
+        "$venv/bin/python3" -m pip install -q --upgrade pip
+        if "$venv/bin/python3" -m pip install -q -r "$py_dir/requirements.txt"; then
+            say "Python miner ready ($venv)."
+            return 0
+        fi
+    fi
+    # Last resort: PEP 668 "externally managed" systems (Debian 12+, Ubuntu 23.04+).
+    if python3 -m pip install -q --break-system-packages -r "$py_dir/requirements.txt" 2>/dev/null \
+        || python3 -m pip install -q -r "$py_dir/requirements.txt" 2>/dev/null; then
+        return 0
+    fi
+    die "Python deps failed. Run: apt install python3-venv python3-full build-essential && FORCE=1 ./mine-pool.sh $ADDRESS"
+}
+
+python_miner_bin() {
+    local venv="$INSTALL_DIR/python-venv"
+    if [ -x "$venv/bin/python3" ] && "$venv/bin/python3" -c "import randomx, websocket" 2>/dev/null; then
+        echo "$venv/bin/python3"
+    else
+        echo python3
     fi
 }
 
 run_python_miner() {
     ensure_python_miner
-    python3 "$INSTALL_DIR/python-miner/miner/blockzero-miner.py" \
+    "$(python_miner_bin)" "$INSTALL_DIR/python-miner/miner/blockzero-miner.py" \
         -o "$POOL_URL" -u "$FULL_WORKER" -t "$THREADS"
 }
 
