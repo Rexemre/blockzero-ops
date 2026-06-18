@@ -109,6 +109,16 @@ else
         cp -R "$app_src" "$APP_DIR/Block Zero.app"
         # Remove the quarantine flag so Gatekeeper does not block first launch.
         xattr -dr com.apple.quarantine "$APP_DIR/Block Zero.app" 2>/dev/null || true
+        # Self-heal: older releases shipped the .app without re-signing after
+        # macdeployqt, so its signature is invalid and macOS calls it "damaged"
+        # and refuses to launch (esp. on Apple Silicon). An ad-hoc re-sign makes
+        # it runnable again. (Notarized releases already verify, so this is a
+        # harmless no-op there.)
+        if ! codesign --verify --deep --strict "$APP_DIR/Block Zero.app" >/dev/null 2>&1; then
+            say "Repairing app signature (ad-hoc re-sign)..."
+            codesign --force --deep --sign - "$APP_DIR/Block Zero.app" >/dev/null 2>&1 \
+                || say "  (re-sign failed; if the app won't open, install Xcode CLT: xcode-select --install)"
+        fi
         say "Installed GUI wallet: $APP_DIR/Block Zero.app"
     else
         say "Note: release has no .app bundle; GUI binary will be in $BIN_DIR (run ./bitcoin-qt)."
@@ -120,6 +130,12 @@ else
         cp "$src/bin/"* "$BIN_DIR/" 2>/dev/null || true
         chmod +x "$BIN_DIR/"* 2>/dev/null || true
         xattr -dr com.apple.quarantine "$BIN_DIR" 2>/dev/null || true
+        # Re-sign ad-hoc if a tool's signature is invalid (same "damaged"/killed
+        # cause as the .app). Harmless on properly signed binaries.
+        for tool in "$BIN_DIR"/*; do
+            [ -f "$tool" ] || continue
+            codesign --verify "$tool" >/dev/null 2>&1 || codesign --force --sign - "$tool" >/dev/null 2>&1 || true
+        done
     fi
     rm -rf "$tmp"
     say "Installed tools to $BIN_DIR"
