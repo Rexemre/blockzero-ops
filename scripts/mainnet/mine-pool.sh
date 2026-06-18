@@ -16,7 +16,6 @@
 set -euo pipefail
 
 POOL_URL="${POOL_URL:-wss://pool.bloz.org/stratum}"
-POOL_REPO="${POOL_REPO:-Rexemre/blockzero-pool}"
 REPO="${REPO:-Rexemre/blockzero-ops}"
 INSTALL_DIR="${INSTALL_DIR:-$HOME/.blockzero/pool}"
 DATA_DIR="${DATA_DIR:-$HOME/.blockzero-mainnet}"
@@ -28,6 +27,35 @@ BIN="$INSTALL_DIR/bin/bz-pool-miner"
 
 say() { printf '%s\n' "$*"; }
 die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BUNDLED_PYTHON_MINER="$SCRIPT_DIR/../../pool/python-miner"
+
+install_python_miner_source() {
+    local py_dir="$INSTALL_DIR/python-miner"
+    if [ -f "$py_dir/miner/blockzero-miner.py" ] && [ -f "$py_dir/requirements.txt" ]; then
+        return 0
+    fi
+    say "Setting up Python pool miner..."
+    mkdir -p "$py_dir"
+    if [ -f "$BUNDLED_PYTHON_MINER/miner/blockzero-miner.py" ]; then
+        cp -a "$BUNDLED_PYTHON_MINER/." "$py_dir/"
+        say "Installed Python miner from blockzero-ops bundle."
+        return 0
+    fi
+    say "Downloading Python miner from blockzero-ops (public repo)..."
+    local tmp; tmp="$(mktemp -d)"
+    if curl -fsSL "https://codeload.github.com/$REPO/tar.gz/refs/heads/main" \
+        | tar -xz -C "$tmp" --strip-components=1 \
+        && [ -d "$tmp/pool/python-miner" ]; then
+        cp -a "$tmp/pool/python-miner/." "$py_dir/"
+        rm -rf "$tmp"
+        say "Installed Python miner from GitHub."
+        return 0
+    fi
+    rm -rf "$tmp"
+    die "Python miner files missing. Run: git pull  (in blockzero-ops)  then retry."
+}
 
 # ---------- payout address ----------
 if [ -z "$ADDRESS" ] && [ -f "$DATA_DIR/mining-address.txt" ]; then
@@ -112,11 +140,9 @@ needs_python_miner() {
 ensure_python_miner() {
     local py_dir="$INSTALL_DIR/python-miner"
     local venv="$INSTALL_DIR/python-venv"
-    if [ ! -f "$py_dir/miner/blockzero-miner.py" ]; then
-        say "Setting up Python pool miner (compatible with older Linux)..."
-        mkdir -p "$py_dir"
-        curl -fsSL "https://codeload.github.com/$POOL_REPO/tar.gz/refs/heads/main" \
-            | tar -xz -C "$py_dir" --strip-components=1
+    install_python_miner_source
+    if [ ! -f "$py_dir/requirements.txt" ]; then
+        die "Python miner requirements.txt missing after install."
     fi
     if [ -x "$venv/bin/python3" ] && "$venv/bin/python3" -c "import randomx, websocket" 2>/dev/null; then
         return 0

@@ -1,0 +1,3 @@
+randomx>=1.1.10
+websockets>=12.0
+websocket-client>=1.7.0
