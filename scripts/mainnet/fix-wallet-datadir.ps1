@@ -27,4 +27,4 @@ if (Test-Path $regKey) {
 }
 
 Write-Host ""
-Write-Host "Start wallet: $env:LOCALAPPDATA\BlockZero\bin\bitcoin-qt.exe"
+Write-Host "Start wallet: $env:LOCALAPPDATA\BlockZero\bin\Block Zero.exe"

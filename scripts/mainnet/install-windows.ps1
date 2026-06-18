@@ -129,13 +129,19 @@ if (Test-Path $LegacyLauncher) {
     Remove-Item $LegacyLauncher -Force
 }
 
-if (-not (Test-Path (Join-Path $BinDir "bitcoin-qt.exe"))) {
-    Write-Warning "bitcoin-qt.exe not installed. Wallet GUI requires blockzero-*-windows-x64.zip (not -cli)."
+$GuiExe = Join-Path $BinDir "Block Zero.exe"
+$LegacyGuiExe = Join-Path $BinDir "bitcoin-qt.exe"
+# Older releases shipped the GUI as bitcoin-qt.exe; rename to the Block Zero name.
+if ((Test-Path $LegacyGuiExe) -and -not (Test-Path $GuiExe)) {
+    Rename-Item $LegacyGuiExe "Block Zero.exe" -Force
+}
+if (-not (Test-Path $GuiExe)) {
+    Write-Warning "Wallet GUI not installed. It requires blockzero-*-windows-x64.zip (not -cli)."
 }
 
 Write-Host ""
 Write-Host "Wallet GUI:"
-Write-Host "  Double-click bitcoin-qt.exe in $BinDir"
+Write-Host "  Double-click `"Block Zero.exe`" in $BinDir"
 Write-Host "  (uses %LOCALAPPDATA%\BlockZeroMainnet automatically — rc20+)"
 Write-Host ""
 Write-Host "Next steps (mainnet):"

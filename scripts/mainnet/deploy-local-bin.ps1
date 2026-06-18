@@ -20,12 +20,18 @@ if (-not (Test-Path (Join-Path $SourceDir "bitcoind.exe"))) {
 }
 
 New-Item -ItemType Directory -Force -Path $BinDir | Out-Null
-Get-Process bitcoind, bitcoin-qt -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+Get-Process bitcoind, bitcoin-qt, "Block Zero" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 Start-Sleep -Seconds 2
 
 Get-ChildItem $SourceDir -Filter "*.exe" | ForEach-Object {
-    Copy-Item $_.FullName $BinDir -Force
-    Write-Host "  $($_.Name)"
+    # Ship the GUI under the Block Zero name (parity with the release + macOS app).
+    if ($_.Name -eq "bitcoin-qt.exe") {
+        Copy-Item $_.FullName (Join-Path $BinDir "Block Zero.exe") -Force
+        Write-Host "  Block Zero.exe (from $($_.Name))"
+    } else {
+        Copy-Item $_.FullName $BinDir -Force
+        Write-Host "  $($_.Name)"
+    }
 }
 Get-ChildItem $SourceDir -Filter "*.dll" -ErrorAction SilentlyContinue | ForEach-Object {
     Copy-Item $_.FullName $BinDir -Force
@@ -37,8 +43,8 @@ if (Test-Path $platforms) {
     Copy-Item (Join-Path $platforms "*") $destPlatforms -Force
 }
 
-$qt = Get-Item (Join-Path $BinDir "bitcoin-qt.exe")
+$qt = Get-Item (Join-Path $BinDir "Block Zero.exe")
 Write-Host ""
 Write-Host "Deployed to $BinDir"
-Write-Host "bitcoin-qt.exe: $($qt.Length) bytes, $($qt.LastWriteTime)"
-Write-Host "Start: Start-Process `"$(Join-Path $BinDir 'bitcoin-qt.exe')`""
+Write-Host "Block Zero.exe: $($qt.Length) bytes, $($qt.LastWriteTime)"
+Write-Host "Start: Start-Process `"$(Join-Path $BinDir 'Block Zero.exe')`""

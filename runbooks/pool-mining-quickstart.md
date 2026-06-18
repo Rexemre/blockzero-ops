@@ -36,6 +36,17 @@ Options (env vars): `THREADS=8 ./mine-pool.sh` · `WORKER=rig2 ./mine-pool.sh bz
 No local wallet yet? The address is read from `~/.blockzero-mainnet/mining-address.txt` if present;
 otherwise pass your `bz1` address as the first argument (address only, no `.rig` suffix).
 
+### GUI wallet on macOS (Apple Silicon)
+
+Want the graphical **Block Zero** wallet (the same `bitcoin-qt` GUI as on Windows)?
+
+```bash
+./install-macos.sh        # installs "Block Zero.app" + bitcoind/bitcoin-cli, sets up ~/.blockzero-mainnet
+open "$HOME/Applications/Block Zero.app"
+```
+
+Copy your `bz1…` address from the **Receive** tab, then mine with `./mine-pool.sh bz1YOURADDRESS`.
+
 ## Commands (Windows)
 
 | Command | What it does |

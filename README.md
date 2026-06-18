@@ -12,7 +12,7 @@ Fair launch. Proof-of-work. No presale. No insiders.
 
 ## Start in 3 steps
 
-1. **Wallet** — [Windows rc24](https://github.com/Rexemre/blockzero-core/releases/tag/v1.0.0-rc24) → get a `bz1…` address
+1. **Wallet** — [Windows](https://github.com/Rexemre/blockzero-core/releases/tag/v1.0.0-rc24) (`Block Zero.exe`) or [macOS Apple Silicon](https://github.com/Rexemre/blockzero-core/releases) (`Block Zero.app`) → get a `bz1…` address
 2. **Pool mine (recommended)** — clone this repo, run:
    ```bash
    cd scripts/mainnet
@@ -29,7 +29,8 @@ Latest pool miner: **[pool-miner-v0.6.9](https://github.com/Rexemre/blockzero-op
 
 | Platform | Script |
 |----------|--------|
-| **Windows (pool)** | [`install-windows.ps1`](scripts/mainnet/install-windows.ps1) → [`mine-mainnet.ps1 -Pool`](scripts/mainnet/mine-mainnet.ps1) or [`mine-pool.bat`](scripts/mainnet/mine-pool.bat) |
+| **Windows (wallet + pool)** | [`install-windows.ps1`](scripts/mainnet/install-windows.ps1) → [`mine-mainnet.ps1 -Pool`](scripts/mainnet/mine-mainnet.ps1) or [`mine-pool.bat`](scripts/mainnet/mine-pool.bat) |
+| **macOS (wallet)** | [`install-macos.sh`](scripts/mainnet/install-macos.sh) — installs **`Block Zero.app`** + tools (Apple Silicon) |
 | **Linux / macOS (pool)** | [`mine-pool.sh`](scripts/mainnet/mine-pool.sh) — `./mine-pool.sh bz1YOURADDRESS` |
 | **Windows (solo)** | [`install-windows.ps1`](scripts/mainnet/install-windows.ps1) → [`mine-mainnet.ps1`](scripts/mainnet/mine-mainnet.ps1) |
 | **Linux / macOS (solo)** | Build from [blockzero-core Releases](https://github.com/Rexemre/blockzero-core/releases), then use [`scripts/mainnet/`](scripts/mainnet/) |
