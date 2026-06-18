@@ -12,7 +12,7 @@ Fair launch. Proof-of-work. No presale. No insiders.
 
 ## Start in 3 steps
 
-1. **Wallet** — [Windows](https://github.com/Rexemre/blockzero-core/releases/tag/v1.0.0-rc24) (`Block Zero.exe`) or [macOS Apple Silicon](https://github.com/Rexemre/blockzero-core/releases) (`Block Zero.app`) → get a `bz1…` address
+1. **Wallet** — [Windows](https://github.com/Rexemre/blockzero-core/releases/tag/v1.0.0-rc28) (`Block Zero.exe`) or [macOS Apple Silicon](https://github.com/Rexemre/blockzero-core/releases) (`Block Zero.app`) → get a `bz1…` address
 2. **Pool mine (recommended)** — clone this repo, run:
    ```bash
    cd scripts/mainnet
