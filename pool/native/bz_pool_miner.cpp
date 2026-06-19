@@ -43,8 +43,10 @@
 
 namespace {
 
-constexpr const char* kMinerVersion = "0.7.3";
-constexpr int kMaxThreads = 64;
+constexpr const char* kMinerVersion = "0.7.4";
+// High cap so big servers (EPYC / Threadripper, often 64-128+ threads) use all
+// their cores. The actual count is still clamped to hardware_concurrency below.
+constexpr int kMaxThreads = 256;
 
 // Fast mode builds a ~2080 MiB RandomX dataset. Add the per-epoch cache (256 MiB),
 // per-thread scratchpads and OS headroom: require ~3 GiB available before we try.
@@ -139,8 +141,15 @@ bool ProbeJitRuntime(randomx_flags flags) {
 randomx_vm* CreateMiningVm(randomx_flags flags, randomx_cache* cache, randomx_dataset* dataset) {
     if (!cache) return nullptr;
     randomx_vm* vm = nullptr;
+    // Prefer a large-page scratchpad (consistent with the dataset; avoids TLB
+    // misses on the hot 2 MiB scratchpad). Falls back to normal pages if huge
+    // pages are exhausted.
+    const randomx_flags lp = static_cast<randomx_flags>(flags | RANDOMX_FLAG_LARGE_PAGES);
     if (dataset) {
-        vm = randomx_create_vm(static_cast<randomx_flags>(flags | RANDOMX_FLAG_FULL_MEM), nullptr, dataset);
+        vm = randomx_create_vm(static_cast<randomx_flags>(lp | RANDOMX_FLAG_FULL_MEM), nullptr, dataset);
+        if (!vm) {
+            vm = randomx_create_vm(static_cast<randomx_flags>(flags | RANDOMX_FLAG_FULL_MEM), nullptr, dataset);
+        }
     }
     if (!vm) {
         vm = randomx_create_vm(flags, cache, nullptr);
@@ -206,9 +215,13 @@ pool::StratumClient* g_client{nullptr};
 
 void BuildDatasetAsync(std::shared_ptr<RxCache> cache, std::string key_hex, randomx_flags flags) {
     std::thread([cache = std::move(cache), key_hex = std::move(key_hex), flags]() {
+        bool large_pages = true;
         randomx_dataset* raw =
             randomx_alloc_dataset(static_cast<randomx_flags>(flags | RANDOMX_FLAG_LARGE_PAGES));
-        if (!raw) raw = randomx_alloc_dataset(flags);
+        if (!raw) {
+            large_pages = false;
+            raw = randomx_alloc_dataset(flags);
+        }
         if (!raw) {
             std::cout << "Fast mode unavailable (needs ~2.3 GB free RAM) - staying in light mode.\n";
             std::cout.flush();
@@ -216,6 +229,14 @@ void BuildDatasetAsync(std::shared_ptr<RxCache> cache, std::string key_hex, rand
             g_dataset_building.store(false);
             return;
         }
+        if (large_pages) {
+            std::cout << "RandomX dataset using HUGE PAGES - full speed.\n";
+        } else {
+            std::cout << "RandomX dataset on normal 4K pages - this is SLOW on many-core CPUs.\n"
+                         "  For full speed reserve huge pages once, then restart the miner:\n"
+                         "    sudo sysctl -w vm.nr_hugepages=1280\n";
+        }
+        std::cout.flush();
 
         std::cout << "Initializing RandomX dataset (fast mode, ~1 min, mining continues)...\n";
         std::cout.flush();

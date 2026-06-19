@@ -261,6 +261,48 @@ else
     fi
 fi
 
+# ---------- huge pages (RandomX is 2-3x faster with them) ----------
+# Fast mode hammers the ~2 GB dataset with random reads. With the default 4 KiB
+# pages the CPU TLB thrashes and hashrate collapses - worst on many-core boxes
+# (EPYC / Threadripper) where dozens of threads contend, so a big server can end
+# up SLOWER than a normal desktop. Reserving 2 MiB huge pages fixes this. Needs
+# root; we try via sudo and otherwise print the one-line manual command.
+setup_hugepages() {
+    [ "$OS" = "Linux" ] || return 0     # macOS manages large pages itself
+    [ -n "$LIGHT_FLAG" ] && return 0     # light mode has no 2 GB dataset
+
+    # 2 MiB pages: dataset ~2080 MiB (1040) + cache 256 MiB (128) + ~2 MiB
+    # scratchpad per thread + headroom.
+    local need=$(( 1040 + 128 + THREADS + 64 ))
+    local have
+    have="$(cat /proc/sys/vm/nr_hugepages 2>/dev/null || echo 0)"
+    if [ "${have:-0}" -ge "$need" ]; then
+        say "Huge pages: ${have} x 2 MiB already reserved (good - RandomX runs full speed)."
+        return 0
+    fi
+
+    local sudo=""
+    if [ "$(id -u)" != "0" ]; then
+        if command -v sudo >/dev/null 2>&1; then
+            sudo="sudo"
+        else
+            say "NOTE: huge pages not reserved (not root). RandomX will be ~2-3x slower."
+            say "      For full speed, run once as root:  sysctl -w vm.nr_hugepages=$need"
+            return 0
+        fi
+    fi
+    if $sudo sysctl -w vm.nr_hugepages="$need" >/dev/null 2>&1; then
+        say "Huge pages: reserved ${need} x 2 MiB for RandomX (fast mode)."
+        # Persist across reboots (best-effort, ignored if not permitted).
+        printf 'vm.nr_hugepages=%s\n' "$need" \
+            | $sudo tee /etc/sysctl.d/99-blockzero-hugepages.conf >/dev/null 2>&1 || true
+    else
+        say "NOTE: couldn't reserve huge pages - mining will run ~2-3x slower."
+        say "      Try once manually:  sudo sysctl -w vm.nr_hugepages=$need"
+    fi
+}
+setup_hugepages
+
 say ""
 say "Pool:    $POOL_URL"
 say "Worker:  $FULL_WORKER"
