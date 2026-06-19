@@ -58,9 +58,11 @@ bool StratumClient::Start() {
     ix::SocketTLSOptions tls;
     tls.caFile = "SYSTEM";
     ws->setTLSOptions(tls);
-    // permessage-deflate negotiation with the Python websockets bridge can drop
-    // the very first mining.notify on some networks; plain frames are reliable.
-    ws->disablePerMessageDeflate();
+    // NOTE: do NOT disable permessage-deflate here. Disabling it made some
+    // builds of ixwebsocket never surface the first mining.notify (the pool
+    // sends the job immediately on subscribe, verified server-side), leaving the
+    // miner stuck on "waiting for first job" and falling back to the slow Python
+    // miner. ixwebsocket's default deflate path is well-tested and reliable.
     ws->enableAutomaticReconnection();
     ws->setMinWaitBetweenReconnectionRetries(2000);
     ws->setMaxWaitBetweenReconnectionRetries(30000);
