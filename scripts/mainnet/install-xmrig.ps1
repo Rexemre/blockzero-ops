@@ -22,6 +22,25 @@ $asset = $rel.assets | Where-Object { $_.name -eq "bz-xmrig-windows-x64.zip" } |
 if (-not $asset) { throw "No bz-xmrig-windows-x64.zip in $($rel.tag_name) (Windows build may still be in progress)" }
 
 New-Item -ItemType Directory -Force -Path $Dir | Out-Null
+
+# Windows Defender (and most AV) flags ALL CPU miners as "riskware" and will
+# block/quarantine xmrig.exe. Add a Defender exclusion for the miner folder so
+# the legit miner can run. Requires Administrator.
+$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+if ($isAdmin) {
+    try {
+        Add-MpPreference -ExclusionPath $Dir -ErrorAction Stop
+        Add-MpPreference -ExclusionProcess "xmrig.exe" -ErrorAction SilentlyContinue
+        Write-Host "Added Windows Defender exclusion for $Dir"
+    } catch {
+        Write-Warning "Could not add Defender exclusion: $($_.Exception.Message)"
+    }
+} else {
+    Write-Warning "NOT running as Administrator - Windows Defender will likely block the miner."
+    Write-Warning "Re-run this in an ADMIN PowerShell, or add an exclusion manually:"
+    Write-Warning "  Add-MpPreference -ExclusionPath '$Dir'"
+}
+
 $zip = Join-Path $Dir "xmrig.zip"
 Write-Host "Downloading $($asset.name) ($($rel.tag_name))..."
 Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $zip -UseBasicParsing
