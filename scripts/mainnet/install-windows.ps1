@@ -70,7 +70,6 @@ function Ensure-MainnetConfig {
     @(
         "# Block Zero mainnet"
         "server=1"
-        "txindex=1"
         ""
         "[main]"
         "listen=1"

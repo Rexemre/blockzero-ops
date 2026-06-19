@@ -70,7 +70,6 @@ ensure_config() {
     cat > "$conf" <<'EOF'
 # Block Zero mainnet
 server=1
-txindex=1
 
 [main]
 listen=1

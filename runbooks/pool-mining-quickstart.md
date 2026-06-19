@@ -1,126 +1,101 @@
 # Pool mining quickstart
 
-Mine BLOZ on **pool.bloz.org** — Windows, Linux and macOS.
+Ops runbook for **pool.bloz.org**. User-facing guides live in [blockzero-docs](https://github.com/Rexemre/blockzero-docs).
 
-Dashboard: https://pool.bloz.org (live stats, copy-paste setup, your earnings)
+| Guide | Link |
+|-------|------|
+| Wallet | [how-to-use-wallet.md](https://github.com/Rexemre/blockzero-docs/blob/main/how-to-use-wallet.md) |
+| Mining (XMRig) | [how-to-mine.md](https://github.com/Rexemre/blockzero-docs/blob/main/how-to-mine.md) |
+| Scripts & alternatives | [quickstart-mining.md](https://github.com/Rexemre/blockzero-docs/blob/main/quickstart-mining.md) |
 
-## Windows
+Dashboard: https://pool.bloz.org
+
+---
+
+## Recommended: XMRig one-liner
+
+See [how-to-mine.md](https://github.com/Rexemre/blockzero-docs/blob/main/how-to-mine.md) for full commands and options (`THREADS`, `WORKER`).
+
+```powershell
+$env:ADDRESS='bz1qYOURADDRESS'; irm https://pool.bloz.org/install.ps1 | iex
+```
+
+```bash
+curl -fsSL https://pool.bloz.org/install.sh | sudo ADDRESS=bz1qYOURADDRESS bash
+```
+
+---
+
+## Alternative: native miner scripts
+
+### Windows (`mine-mainnet.ps1 -Pool`)
 
 ```powershell
 git clone https://github.com/Rexemre/blockzero-ops.git
 cd blockzero-ops\scripts\mainnet
 .\install-windows.ps1
 .\mine-mainnet.ps1 -Pool
+.\mine-mainnet.ps1 -Pool -Threads 4
 ```
 
-First run: installs binaries, creates wallet + `bz1` address, downloads pool miner, starts mining.
-Later runs: uses your existing BlockZero wallet automatically.
-
-## Linux / macOS
+### Linux / macOS (`mine-pool.sh`)
 
 ```bash
 git clone https://github.com/Rexemre/blockzero-ops.git
 cd blockzero-ops/scripts/mainnet
 chmod +x mine-pool.sh
-./mine-pool.sh bz1YOURADDRESS        # or just ./mine-pool.sh if you have a local wallet
+sudo ./mine-pool.sh bz1YOURADDRESS
 ```
 
-**Important:** pass **only your `bz1` payout address** — not `bz1…rig1`. The script builds the Stratum
-worker as `bz1YOURADDRESS.rigname` automatically (rig name = your hostname, or set `WORKER=rig2`).
+Pass **address only** — not `bz1…rig1`. Options: `THREADS=8` · `WORKER=rig2` · `FORCE=1`.
 
-The script downloads the prebuilt miner (Linux x64, Linux arm64, macOS arm64) from
-[blockzero-ops releases](https://github.com/Rexemre/blockzero-ops/releases) and auto-restarts on crashes.
-
-Options (env vars): `THREADS=8 ./mine-pool.sh` · `WORKER=rig2 ./mine-pool.sh bz1…` · `FORCE=1` re-downloads the miner.
-
-No local wallet yet? The address is read from `~/.blockzero-mainnet/mining-address.txt` if present;
-otherwise pass your `bz1` address as the first argument (address only, no `.rig` suffix).
-
-### GUI wallet on macOS (Apple Silicon)
-
-Want the graphical **Block Zero** wallet (the same `bitcoin-qt` GUI as on Windows)?
-
-```bash
-./install-macos.sh        # installs "Block Zero.app" + bitcoind/bitcoin-cli, sets up ~/.blockzero-mainnet
-open "$HOME/Applications/Block Zero.app"
-```
-
-Copy your `bz1…` address from the **Receive** tab, then mine with `./mine-pool.sh bz1YOURADDRESS`.
-
-## Commands (Windows)
-
-| Command | What it does |
-|---------|----------------|
-| `.\mine-mainnet.ps1 -Pool` | Pool mine (recommended) |
-| `.\mine-mainnet.ps1 -Pool -Threads 4` | Pool mine, 4 CPU threads |
-| `.\mine-pool.bat` | Same as `-Pool` (double-click) |
-| `.\mine-mainnet.ps1 -Status` | Solo node status + wallet balance |
-| `.\mine-pool-mainnet.ps1 -Status` | Pool height, fee, stratum, pool hashrate |
-
-## Files
-
-| Path | Purpose |
-|------|---------|
-| `%LOCALAPPDATA%\BlockZeroMainnet\mining-address.txt` | Your `bz1` payout address (Windows) |
-| `~/.blockzero-mainnet/mining-address.txt` | Same (Linux/macOS) |
-| `%LOCALAPPDATA%\BlockZero\pool\miner.conf` | Pool miner settings (threads, worker name) |
-| `~/.blockzero/pool/bin/bz-pool-miner` | Pool miner binary (Linux/macOS, auto-downloaded) |
-
-## Solo vs pool
-
-| | Solo | Pool (`-Pool` / `mine-pool.sh`) |
-|--|--|--|
-| Node sync | Required | Not for mining (wallet setup once) |
-| Wallet | BlockZero | Same wallet |
-| Payout | Direct | PPLNS (2% fee, min 0.5 BLOZ) |
+---
 
 ## Pool settings
 
 | Setting | Value |
 |---------|-------|
 | Dashboard | https://pool.bloz.org |
-| Stratum | `wss://pool.bloz.org/stratum` |
-| Worker (Stratum) | `bz1YOURADDRESS.rigname` — built by the script; rig = hostname or `WORKER=` |
-| `mine-pool.sh` arg | **`bz1YOURADDRESS` only** — do not append `.rig1` yourself |
-| Password | none (`x` by convention, ignored) |
-| Threads | auto = all cores − 1; max 64 |
+| XMRig stratum | `pool.bloz.org:3334` (TCP) |
+| Native stratum | `wss://pool.bloz.org/stratum` |
+| Worker format | `bz1YOURADDRESS.rigname` |
+| Password | `x` |
+| Payout | PPLNS, 2% fee, min 0.5 BLOZ |
+
+---
 
 ## Pool transparency
 
 | Item | Value |
 |------|-------|
 | Pool payout address | `bz1qxp5dek9uq4hzemeg9cv0f8hfm3hl35kxunfkma` |
-| Explorer | [View on explorer.bloz.org](https://explorer.bloz.org/address/bz1qxp5dek9uq4hzemeg9cv0f8hfm3hl35kxunfkma) |
-| Pool engine source | [blockzero-pool (GitHub)](https://github.com/Rexemre/blockzero-pool) |
-| Miner source | [blockzero-ops/pool/native](https://github.com/Rexemre/blockzero-ops/tree/main/pool/native) |
+| Explorer | [explorer.bloz.org](https://explorer.bloz.org/address/bz1qxp5dek9uq4hzemeg9cv0f8hfm3hl35kxunfkma) |
+| Pool engine | [blockzero-pool](https://github.com/Rexemre/blockzero-pool) |
+| Miner source | [pool/native](https://github.com/Rexemre/blockzero-ops/tree/main/pool/native) · [xmrig-bz](https://github.com/Rexemre/blockzero-ops/tree/main/xmrig-bz) |
 
-**How block rewards flow:**  
-When the pool finds a block, the coinbase (block reward) is paid to the pool payout address above.
-The pool engine immediately calculates each miner's PPLNS share and adds it to their pending balance.
-Payouts happen automatically once a miner's pending balance reaches 0.5 BLOZ — no claiming needed.
+When the pool finds a block, rewards are split PPLNS and auto-paid once balance ≥ 0.5 BLOZ.
 
-The pool fee is 2% of each block reward. It stays in the pool address to cover server costs.
-The remaining 98% is distributed to miners proportionally based on their share of the PPLNS window.
-
-## Miner behavior (v0.6+)
-
-- **Fast mode (default)** — builds a ~2 GB RandomX dataset in the background (~1 min). Mining continues in light mode during build. Hashrate jumps ~10× once the dataset is ready.
-- **Light mode** (`--light`) — 256 MB cache only, starts immediately at lower hashrate.
-- **JIT enabled on Windows** — RandomX JIT with SECURE pages (W^X) for full native speed.
-- Survives connection drops: reconnects and re-subscribes automatically
-- RandomX cache reused across jobs within an epoch (no re-init stall per job)
-- VMs reused across job changes — only rebuilt on epoch key change or dataset ready
-- Reports total hashrate + accepted/rejected shares every 30 s
-- Thread count is clamped 1–64 (never a hard error)
+---
 
 ## Troubleshooting
 
-- **No wallet (Windows)** — run `.\mine-mainnet.ps1 -Pool` (creates wallet on first run)
-- **Not on the dashboard yet** — connected ≠ listed; you appear after the first **accepted share** (check terminal for `Share accepted`)
-- **No hashrate on dashboard** — wait 2–5 min after the first `Share accepted`; estimation needs a few shares
-- **Worker shows `.rig.rig` (doubled name)** — you passed `bz1…rig1` to `mine-pool.sh`; use address only: `./mine-pool.sh bz1…`
-- **Hashrate shows 0 then jumps** — normal: fast mode builds the 2 GB dataset for ~1 min first
-- **Change threads** — Windows: `-Threads 8` · Linux/macOS: `THREADS=8 ./mine-pool.sh`
-- **Pool connection error** — check firewall; the pool uses WSS on port 443
-- **macOS blocks the binary** — System Settings → Privacy & Security → Allow
-- **Share rejected: stale job** — update to pool miner v0.6.1+ (auto-updated by `mine-mainnet.ps1`)
+| Issue | Fix |
+|-------|-----|
+| Not on dashboard yet | Wait for first **accepted share** (~1–2 min) |
+| Worker shows `.rig.rig` | Pass address only to `mine-pool.sh`, not `bz1…rig1` |
+| Hashrate 0 then jumps | Normal — RandomX dataset builds ~1 min first |
+| Change threads | XMRig: [how-to-mine.md § Options](https://github.com/Rexemre/blockzero-docs/blob/main/how-to-mine.md#options--threads-rig-name--more) · native: `-Threads 8` / `THREADS=8` |
+| macOS blocks binary | System Settings → Privacy & Security → Allow |
+| Low hashrate on EPYC | Run with `sudo` for huge pages |
+
+More: [FAQ](https://github.com/Rexemre/blockzero-docs/blob/main/faq.md)
+
+---
+
+## Files (Windows)
+
+| Path | Purpose |
+|------|---------|
+| `%LOCALAPPDATA%\BlockZeroMainnet\mining-address.txt` | Payout address |
+| `%LOCALAPPDATA%\BlockZero\xmrig\` | XMRig install location |
+| `~/.blockzero/xmrig/` | XMRig (Linux/macOS) |

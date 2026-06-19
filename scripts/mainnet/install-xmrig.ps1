@@ -1,8 +1,17 @@
 # Block Zero one-line miner installer (Windows) using patched XMRig.
 #
-#   $env:ADDRESS='bz1qYOURADDRESS'; irm https://raw.githubusercontent.com/Rexemre/blockzero-ops/main/scripts/mainnet/install-xmrig.ps1 | iex
+# Basic:
+#   $env:ADDRESS='bz1qYOURADDRESS'; irm https://pool.bloz.org/install.ps1 | iex
 #
-# Env: ADDRESS (required), WORKER (default: hostname), POOL (default pool.bloz.org:3334), THREADS
+# With options (threads, rig name):
+#   $env:ADDRESS='bz1qYOURADDRESS'; $env:THREADS='8'; $env:WORKER='gaming-pc'; irm https://pool.bloz.org/install.ps1 | iex
+#
+# Env:
+#   ADDRESS          your payout address (required; or pass as $1)
+#   WORKER           rig name on the dashboard (default: hostname)
+#   POOL             pool stratum host:port (default: pool.bloz.org:3334)
+#   THREADS          CPU threads — omit for auto (recommended)
+#   REPO             GitHub repo for releases (default: Rexemre/blockzero-ops)
 $ErrorActionPreference = "Stop"
 
 $Repo    = if ($env:REPO) { $env:REPO } else { "Rexemre/blockzero-ops" }

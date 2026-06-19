@@ -1,13 +1,21 @@
 #!/usr/bin/env bash
 # Block Zero one-line miner installer (Linux / macOS) using patched XMRig.
 #
-#   curl -fsSL https://raw.githubusercontent.com/Rexemre/blockzero-ops/main/scripts/mainnet/install-xmrig.sh | ADDRESS=bz1qYOURADDRESS bash
+# Basic:
+#   curl -fsSL https://pool.bloz.org/install.sh | ADDRESS=bz1qYOURADDRESS bash
+#
+# Linux (sudo = huge pages = full speed):
+#   curl -fsSL https://pool.bloz.org/install.sh | sudo ADDRESS=bz1qYOURADDRESS bash
+#
+# With options (threads, rig name):
+#   curl -fsSL https://pool.bloz.org/install.sh | sudo ADDRESS=bz1qYOURADDRESS THREADS=8 WORKER=rig2 bash
 #
 # Env:
 #   ADDRESS=bz1...   your payout address (required; or pass as $1)
-#   WORKER=name      rig name (default: hostname)
+#   WORKER=name      rig name on the dashboard (default: hostname)
 #   POOL=host:port   pool stratum (default: pool.bloz.org:3334)
-#   THREADS=N        CPU threads (default: XMRig auto)
+#   THREADS=N        CPU threads — omit for auto (recommended)
+#   REPO=owner/repo  GitHub repo for releases (default: Rexemre/blockzero-ops)
 set -eu
 
 REPO="${REPO:-Rexemre/blockzero-ops}"
