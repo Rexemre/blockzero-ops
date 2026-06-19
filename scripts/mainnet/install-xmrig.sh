@@ -52,7 +52,8 @@ tar -xzf "$DIR/xmrig.tgz" -C "$DIR"
 chmod +x "$DIR/xmrig"
 [ "$OS" = "Darwin" ] && xattr -dr com.apple.quarantine "$DIR/xmrig" 2>/dev/null || true
 
-ARGS="-a rx/blockzero -o $POOL -u $ADDRESS.$WORKER -p x"
+# --donate-level 0: no donation to XMRig devs (Block Zero's on-chain dev fund is separate).
+ARGS="-a rx/blockzero -o $POOL -u $ADDRESS.$WORKER -p x --donate-level 0"
 [ -n "${THREADS:-}" ] && ARGS="$ARGS -t $THREADS"
 
 printf '\nStarting XMRig: %s.%s on %s\n' "$ADDRESS" "$WORKER" "$POOL"

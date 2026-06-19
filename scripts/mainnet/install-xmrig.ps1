@@ -57,7 +57,8 @@ Expand-Archive -Path $zip -DestinationPath $Dir -Force
 $exe = Get-ChildItem -Path $Dir -Recurse -Filter "xmrig.exe" | Select-Object -First 1
 if (-not $exe) { throw "xmrig.exe not found after extract" }
 
-$xargs = @("-a","rx/blockzero","-o",$Pool,"-u","$Address.$Worker","-p","x")
+# --donate-level 0: no donation to XMRig devs (Block Zero's on-chain dev fund is separate).
+$xargs = @("-a","rx/blockzero","-o",$Pool,"-u","$Address.$Worker","-p","x","--donate-level","0")
 if ($env:THREADS) { $xargs += @("-t",$env:THREADS) }
 
 Write-Host ""
