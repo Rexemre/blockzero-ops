@@ -79,8 +79,39 @@ jobs:
           name: bz-xmrig-macos-arm64
           path: bz-xmrig-macos-arm64.tar.gz
 
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Clone deps + XMRig + patch
+        shell: bash
+        run: |
+          git clone --depth 1 https://github.com/xmrig/xmrig-deps.git
+          git clone --branch "$XMRIG_TAG" --depth 1 https://github.com/xmrig/xmrig
+          python xmrig-bz/patch.py xmrig
+      - name: Build
+        shell: cmd
+        run: |
+          cd xmrig
+          mkdir build
+          cd build
+          cmake .. -G "Visual Studio 17 2022" -A x64 -DXMRIG_DEPS=%GITHUB_WORKSPACE%\xmrig-deps\msvc2022\x64
+          cmake --build . --config Release
+      - name: Package
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp xmrig/build/Release/xmrig.exe dist/
+          cp xmrig/bin/WinRing0/WinRing0x64.sys dist/ 2>/dev/null || true
+          cd dist && powershell -Command "Compress-Archive -Path * -DestinationPath ../bz-xmrig-windows-x64.zip -Force"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bz-xmrig-windows-x64
+          path: bz-xmrig-windows-x64.zip
+
   release:
-    needs: [linux, macos]
+    needs: [linux, macos, windows]
     if: ${{ always() && startsWith(github.ref, 'refs/tags/') }}
     runs-on: ubuntu-latest
     permissions:
@@ -96,6 +127,7 @@ jobs:
           files: |
             artifacts/bz-xmrig-linux-x64/bz-xmrig-linux-x64.tar.gz
             artifacts/bz-xmrig-macos-arm64/bz-xmrig-macos-arm64.tar.gz
+            artifacts/bz-xmrig-windows-x64/bz-xmrig-windows-x64.zip
           body: |
             **Patched XMRig for Block Zero** — adds the `rx/blockzero` algorithm
             (80-byte Bitcoin header, nonce@76; standard RandomX otherwise).
