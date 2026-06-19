@@ -6,10 +6,13 @@ Block Zero uses the standard tevador/RandomX hash function (= XMRig's reference
 the 4-byte nonce at offset 76 (instead of Monero's offset 39).
 
 This adds a new algo `rx/blockzero` (id 0x72151276 = rx/0 config) whose only
-difference from rx/0 is nonceOffset() == 76. Three files touched:
+difference from rx/0 is nonceOffset() == 76, and disables XMRig's dev donation.
+Files touched:
   - src/base/crypto/Algorithm.h    : enum id + name decl
   - src/base/crypto/Algorithm.cpp  : name def + names/aliases/all() lists
   - src/base/net/stratum/Job.cpp   : nonceOffset() returns 76
+  - src/donate.h                   : default + minimum donate level = 0
+  - src/Summary.cpp                : remove the "DONATE" startup line
 
 Each edit asserts it applied, so a source-layout drift fails the build loudly
 instead of silently producing a broken miner.
@@ -63,5 +66,23 @@ apply("src/base/net/stratum/Job.cpp", "nonceOffset() == 76",
       sub1(r'\n(\s*)return 39;',
            lambda m: ("\n{i}if (algorithm() == Algorithm::RX_BLOCKZERO) {{\n"
                       "{i}    return 76;\n{i}}}\n\n{i}return 39;").format(i=m.group(1))))
+
+# --- donate.h : 0% donation ---
+# Stock XMRig clamps --donate-level up to kMinimumDonateLevel (1), so the runtime
+# flag alone can't reach 0%. Set both default and minimum to 0 so Block Zero
+# miners donate nothing to XMRig's devs. (Block Zero's on-chain Dev & Growth Fund
+# is a separate, consensus-level mechanism.)
+apply("src/donate.h", "kDefaultDonateLevel = 0",
+      sub1(r'(kDefaultDonateLevel\s*=\s*)\d+;', r'\g<1>0;'))
+apply("src/donate.h", "kMinimumDonateLevel = 0",
+      sub1(r'(kMinimumDonateLevel\s*=\s*)\d+;', r'\g<1>0;'))
+
+# --- Summary.cpp : hide the "DONATE" startup line ---
+# Even at 0% XMRig prints a "DONATE 0%" line in the startup summary, which
+# confuses Block Zero miners (they think the pool/chain takes a cut). Remove the
+# line entirely so it never shows.
+apply("src/Summary.cpp", "remove DONATE summary line",
+      sub1(r'(?s)\n[ \t]*Log::print\(GREEN_BOLD\(" \* "\) WHITE_BOLD\("%-13s"\) WHITE_BOLD\("%s%d%%"\),\s*"DONATE",.*?\);\n',
+           "\n"))
 
 print("OK - rx/blockzero patch applied.")

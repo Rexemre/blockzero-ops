@@ -7,9 +7,6 @@ name: build-xmrig-blockzero
 on:
   push:
     tags: ['xmrig-v*']
-    paths:
-      - 'xmrig-bz/**'
-      - '.github/workflows/build-xmrig.yml'
   workflow_dispatch:
 
 env:
