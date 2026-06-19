@@ -75,12 +75,13 @@ bool StratumClient::Start() {
             // Re-subscribe + authorize on every (re)connect so mining resumes
             // automatically after network drops or pool restarts.
             SendHello();
-            // Until the first job arrives, watch the connection and force a fresh
-            // reconnect if the pool stays silent (a brand-new connection reliably
-            // delivers work). Avoids the slow Python fallback for a transient miss.
-            if (jobs_received_.load() == 0) {
-                std::thread([this]() { NoJobWatchdog(); }).detach();
-            }
+            // NOTE: no NoJobWatchdog here anymore. It spawned a new watchdog
+            // thread on every (re)connect without stopping the old ones; on fast
+            // many-core boxes the threads piled up and kept force-closing the
+            // socket, so the connection never stayed up long enough to receive
+            // the first job (endless reconnect churn, never mining). The pool now
+            // sends a job immediately on both subscribe AND authorize, and
+            // ixwebsocket already auto-reconnects on real drops - so just wait.
         } else if (msg->type == ix::WebSocketMessageType::Message) {
             OnMessage(msg->str);
         } else if (msg->type == ix::WebSocketMessageType::Error) {

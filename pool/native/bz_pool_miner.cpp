@@ -43,7 +43,7 @@
 
 namespace {
 
-constexpr const char* kMinerVersion = "0.7.6";
+constexpr const char* kMinerVersion = "0.7.7";
 // High cap so big servers (EPYC / Threadripper, often 64-128+ threads) use all
 // their cores. The actual count is still clamped to hardware_concurrency below.
 constexpr int kMaxThreads = 256;
