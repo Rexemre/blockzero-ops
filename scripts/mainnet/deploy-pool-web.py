@@ -39,7 +39,7 @@ def upload_with_pw(host: str, pw: str) -> None:
     c.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     c.connect(host, username="root", password=pw, timeout=30)
     s = c.open_sftp()
-    for name in ("index.html", "assets/app.css", "assets/app.js"):
+    for name in ("index.html", "assets/app.css", "assets/app.js", "install.sh", "install.ps1"):
         local = os.path.join(ROOT, name.replace("/", os.sep))
         if not os.path.exists(local):
             continue
