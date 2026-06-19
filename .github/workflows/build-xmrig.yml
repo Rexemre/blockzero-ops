@@ -1,0 +1,107 @@
+name: build-xmrig-blockzero
+
+# Builds a patched XMRig with the `rx/blockzero` algorithm (80-byte Bitcoin
+# header, nonce@76) so miners can use the battle-tested XMRig against the pool's
+# XMRig-compatible stratum (:3334).  Patch lives in xmrig-bz/patch.py.
+
+on:
+  push:
+    tags: ['xmrig-v*']
+    paths:
+      - 'xmrig-bz/**'
+      - '.github/workflows/build-xmrig.yml'
+  workflow_dispatch:
+
+env:
+  XMRIG_TAG: v6.26.0
+
+jobs:
+  linux:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build deps
+        run: sudo apt-get update && sudo apt-get install -y git build-essential cmake automake libtool autoconf
+      - name: Clone + patch XMRig
+        run: |
+          git clone --branch "$XMRIG_TAG" --depth 1 https://github.com/xmrig/xmrig
+          python3 xmrig-bz/patch.py xmrig
+      - name: Build static deps
+        run: cd xmrig/scripts && ./build_deps.sh
+      - name: Build
+        run: |
+          cd xmrig
+          mkdir build && cd build
+          cmake .. -DXMRIG_DEPS=scripts/deps -DWITH_HWLOC=OFF -DCMAKE_BUILD_TYPE=Release
+          make -j"$(nproc)"
+          ./xmrig --version
+      - name: Package
+        run: |
+          mkdir -p dist
+          cp xmrig/build/xmrig dist/
+          tar -czf bz-xmrig-linux-x64.tar.gz -C dist xmrig
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bz-xmrig-linux-x64
+          path: bz-xmrig-linux-x64.tar.gz
+
+  macos:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build deps
+        run: brew install cmake automake libtool autoconf
+      - name: Clone + patch XMRig
+        run: |
+          git clone --branch "$XMRIG_TAG" --depth 1 https://github.com/xmrig/xmrig
+          python3 xmrig-bz/patch.py xmrig
+      - name: Build static deps
+        run: cd xmrig/scripts && ./build_deps.sh
+      - name: Build
+        run: |
+          cd xmrig
+          mkdir build && cd build
+          cmake .. -DXMRIG_DEPS=scripts/deps -DWITH_HWLOC=OFF -DCMAKE_BUILD_TYPE=Release
+          make -j"$(sysctl -n hw.ncpu)"
+          # Ad-hoc codesign with JIT entitlement (required for RandomX JIT on macOS).
+          codesign --force --options runtime \
+            --entitlements "$GITHUB_WORKSPACE/xmrig-bz/entitlements.plist" -s - ./xmrig
+          ./xmrig --version
+      - name: Package
+        run: |
+          mkdir -p dist
+          cp xmrig/build/xmrig dist/
+          tar -czf bz-xmrig-macos-arm64.tar.gz -C dist xmrig
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bz-xmrig-macos-arm64
+          path: bz-xmrig-macos-arm64.tar.gz
+
+  release:
+    needs: [linux, macos]
+    if: ${{ always() && startsWith(github.ref, 'refs/tags/') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          fail_on_unmatched_files: false
+          files: |
+            artifacts/bz-xmrig-linux-x64/bz-xmrig-linux-x64.tar.gz
+            artifacts/bz-xmrig-macos-arm64/bz-xmrig-macos-arm64.tar.gz
+          body: |
+            **Patched XMRig for Block Zero** — adds the `rx/blockzero` algorithm
+            (80-byte Bitcoin header, nonce@76; standard RandomX otherwise).
+
+            Run against the pool's XMRig endpoint:
+            ```
+            xmrig -a rx/blockzero -o pool.bloz.org:3334 -u bz1qYOURADDRESS.rig -p x
+            ```
+            Built from xmrig ${{ env.XMRIG_TAG }} + xmrig-bz/patch.py.
