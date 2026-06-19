@@ -22,7 +22,17 @@ DATA_DIR="${DATA_DIR:-$HOME/.blockzero-mainnet}"
 WORKER="${WORKER:-$(hostname -s 2>/dev/null || echo rig1)}"
 THREADS="${THREADS:-0}"
 
-ADDRESS="${1:-}"
+# Args: first non-flag = bz1 address; -Threads/-t N sets the thread count
+# (previously -Threads was silently ignored here; only THREADS= env worked).
+ADDRESS=""
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -Threads|--Threads|-t|--threads)
+            THREADS="${2:-$THREADS}"; shift; [ $# -gt 0 ] && shift ;;
+        -Threads=*|--Threads=*|--threads=*) THREADS="${1#*=}"; shift ;;
+        *) [ -z "$ADDRESS" ] && ADDRESS="$1"; shift ;;
+    esac
+done
 BIN="$INSTALL_DIR/bin/bz-pool-miner"
 
 say() { printf '%s\n' "$*"; }
@@ -190,32 +200,14 @@ run_python_miner() {
 }
 
 # Run the native miner (the FAST path: fast-mode dataset + JIT, ~10x the Python
-# miner). The binary self-heals job delivery by reconnecting, so we only fall
-# back to the slow Python miner as a true last resort: no job AND no hashrate at
-# all after ~180s, which means RandomX is genuinely broken on this machine.
-# Returns 99 to signal the caller to use the Python miner.
-run_native_with_watchdog() {
-    local logf; logf="$(mktemp)"
-    "$BIN" -o "$POOL_URL" -u "$FULL_WORKER" -Threads "$THREADS" $LIGHT_FLAG > >(tee "$logf") 2>&1 &
-    local pid=$!
-    local i=0
-    while kill -0 "$pid" 2>/dev/null; do
-        # Once it is mining, stay on the fast native miner and just wait it out.
-        if grep -qE 'Share found|Hashrate: [1-9][0-9]* H/s' "$logf"; then
-            local rc=0; wait "$pid" || rc=$?; rm -f "$logf"; return "$rc"
-        fi
-        i=$((i + 1))
-        if [ "$i" -ge 180 ]; then
-            say ""
-            say "Native miner produced no hashrate in ~180s - falling back to Python miner."
-            kill "$pid" 2>/dev/null || true
-            wait "$pid" 2>/dev/null || true
-            rm -f "$logf"
-            return 99
-        fi
-        sleep 1
-    done
-    local rc=0; wait "$pid" 2>/dev/null || rc=$?; rm -f "$logf"; return "$rc"
+# miner). We do NOT time-out into the Python miner anymore: that "fallback" was
+# replacing the fast miner with the 10x-slower interpreter whenever the dataset
+# build took a while (common on many-core boxes), which made big CPUs crawl.
+# The binary already retries the pool connection itself, and old-glibc systems
+# are detected up front via needs_python_miner(). So: if the native binary runs,
+# we stay on it.
+run_native() {
+    "$BIN" -o "$POOL_URL" -u "$FULL_WORKER" -Threads "$THREADS" $LIGHT_FLAG
 }
 
 USE_PYTHON=0
@@ -322,11 +314,7 @@ while true; do
         continue
     else
         rc=0
-        run_native_with_watchdog && rc=0 || rc=$?
-        if [ "$rc" -eq 99 ]; then
-            USE_PYTHON=1
-            continue
-        fi
+        run_native && rc=0 || rc=$?
         if [ "$rc" -ne 0 ]; then
             if needs_python_miner; then
                 say "Switching to Python miner (GLIBC/GLIBCXX too old for prebuilt binary)..."

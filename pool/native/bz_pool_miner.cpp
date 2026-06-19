@@ -43,7 +43,7 @@
 
 namespace {
 
-constexpr const char* kMinerVersion = "0.7.4";
+constexpr const char* kMinerVersion = "0.7.5";
 // High cap so big servers (EPYC / Threadripper, often 64-128+ threads) use all
 // their cores. The actual count is still clamped to hardware_concurrency below.
 constexpr int kMaxThreads = 256;
@@ -418,7 +418,7 @@ void ReportThread() {
     auto t0 = std::chrono::steady_clock::now();
     uint64_t last = 0;
     while (!g_stop.load()) {
-        for (int i = 0; i < 300 && !g_stop.load(); ++i) {
+        for (int i = 0; i < 100 && !g_stop.load(); ++i) {  // ~10s report interval
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
         if (g_stop.load()) break;
@@ -449,16 +449,17 @@ void ReportThread() {
             std::fflush(stdout);
             continue;
         }
+        // Always print the live hashrate so the user can see real numbers (and
+        // so wrapper scripts can detect that mining is alive). Label the mode:
+        // building the dataset, light, or full fast mode.
+        const char* mode;
         if (g_fast_mode && !fast && g_dataset_building.load()) {
-            std::printf("Building RandomX dataset (fast mode, ~1 min) - hashrate jumps when ready. "
-                        "Current: %.0f H/s | shares: %llu accepted\n",
-                        rate, static_cast<unsigned long long>(acc));
-            std::fflush(stdout);
-            continue;
+            mode = "building dataset, fast soon";
+        } else {
+            mode = fast ? "fast" : "light";
         }
         std::printf("Hashrate: %.0f H/s (%s) | shares: %llu accepted",
-                    rate, fast ? "fast" : "light",
-                    static_cast<unsigned long long>(acc));
+                    rate, mode, static_cast<unsigned long long>(acc));
         if (rej > 0) std::printf(", %llu rejected", static_cast<unsigned long long>(rej));
         std::printf("\n");
         std::fflush(stdout);
@@ -594,6 +595,11 @@ int main(int argc, char* argv[]) {
               << " | RAM avail: " << (diag_ram ? std::to_string(diag_ram) + " MiB" : "unknown")
               << " | cores: " << std::thread::hardware_concurrency() << "\n";
     std::cout << "Config:  " << conf_path << "\n";
+    if (threads > 32) {
+        std::cout << "Tip: RandomX fast mode is usually fastest at your PHYSICAL core count, "
+                     "not every SMT thread. If the hashrate looks low, try fewer threads "
+                     "(e.g. -Threads = number of physical cores).\n";
+    }
     std::cout << "Press Ctrl+C to stop.\n\n";
     std::cout.flush();
 
