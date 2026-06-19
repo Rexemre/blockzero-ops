@@ -12,16 +12,19 @@ Fair launch. Proof-of-work. No presale. No insiders.
 
 ## Start in 3 steps
 
-1. **Wallet** — [Windows](https://github.com/Rexemre/blockzero-core/releases/tag/v1.0.0-rc28) (`Block Zero.exe`) or [macOS Apple Silicon](https://github.com/Rexemre/blockzero-core/releases) (`Block Zero.app`) → get a `bz1…` address
-2. **Pool mine (recommended)** — clone this repo, run:
+1. **Get a `bz1…` address** — download the [Block Zero wallet](https://github.com/Rexemre/blockzero-core/releases/latest) (`Block Zero.exe` / `Block Zero.app`), open it, copy your address from the **Receive** tab.
+2. **Pool mine with XMRig (recommended)** — one line, replace `bz1qYOURADDRESS`:
    ```bash
-   cd scripts/mainnet
-   ./mine-pool.sh bz1YOURADDRESS          # Linux / macOS
+   # Linux (sudo = huge pages = full speed) / macOS
+   curl -fsSL https://pool.bloz.org/install.sh | sudo ADDRESS=bz1qYOURADDRESS bash
    ```
-   Windows: `.\install-windows.ps1` → `.\mine-mainnet.ps1 -Pool`
-3. **Help** — **[Discord](https://discord.gg/FbJzrwAU2W)** · pool stats at [pool.bloz.org](https://pool.bloz.org)
+   ```powershell
+   # Windows — PowerShell as Administrator (antivirus flags all CPU miners)
+   $env:ADDRESS='bz1qYOURADDRESS'; irm https://pool.bloz.org/install.ps1 | iex
+   ```
+3. **Help** — **[Discord](https://discord.gg/FbJzrwAU2W)** · live stats at [pool.bloz.org](https://pool.bloz.org)
 
-Latest pool miner: **[pool-miner-v0.7.3](https://github.com/Rexemre/blockzero-ops/releases/tag/pool-miner-v0.7.3)** · `FORCE=1 ./mine-pool.sh` pulls it automatically.
+Uses patched [XMRig](https://github.com/xmrig/xmrig) (`rx/blockzero`, built in [`xmrig-bz/`](xmrig-bz/)). Prefer the native miner/scripts? See below.
 
 ---
 
