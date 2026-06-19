@@ -16,6 +16,11 @@
 set -euo pipefail
 
 POOL_URL="${POOL_URL:-wss://pool.bloz.org/stratum}"
+# TCP=1 uses plain-TCP stratum instead of WebSocket - for networks where the
+# WebSocket layer is mangled (some virtualized / proxied / Proxmox setups).
+if [ "${TCP:-0}" = "1" ] && [ "${POOL_URL#stratum+tcp://}" = "$POOL_URL" ]; then
+    POOL_URL="stratum+tcp://pool.bloz.org:3333"
+fi
 REPO="${REPO:-Rexemre/blockzero-ops}"
 INSTALL_DIR="${INSTALL_DIR:-$HOME/.blockzero/pool}"
 DATA_DIR="${DATA_DIR:-$HOME/.blockzero-mainnet}"

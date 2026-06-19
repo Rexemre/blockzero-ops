@@ -5,6 +5,7 @@
 #include <mutex>
 #include <set>
 #include <string>
+#include <thread>
 
 namespace pool {
 
@@ -38,6 +39,7 @@ private:
     void SendHello();
     void NoJobWatchdog();
     void SendLine(const std::string& line);
+    void RunTcp(); // raw plain-TCP stratum transport (POSIX only)
     static std::string ExtractNotifyParam(const std::string& json, int index);
 
     std::string url_;
@@ -53,6 +55,13 @@ private:
     std::atomic<uint64_t> jobs_received_{0};
     std::atomic<uint64_t> accepted_{0};
     std::atomic<uint64_t> rejected_{0};
+    // Raw-TCP transport (used when the URL is stratum+tcp:// or tcp://). This
+    // bypasses ixwebsocket entirely for environments where the WebSocket layer
+    // misbehaves (some Linux/virtualized networks).
+    bool tcp_mode_{false};
+    std::atomic<long long> sock_{-1};
+    std::atomic<bool> stop_{false};
+    std::thread tcp_thread_;
 };
 
 } // namespace pool

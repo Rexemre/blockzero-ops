@@ -8,6 +8,19 @@
 #include <sstream>
 #include <thread>
 
+#ifndef _WIN32
+#include <arpa/inet.h>
+#include <csignal>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#ifndef MSG_NOSIGNAL
+#define MSG_NOSIGNAL 0
+#endif
+#endif
+
 namespace pool {
 
 namespace {
@@ -51,6 +64,16 @@ void StratumClient::SendHello() {
 
 bool StratumClient::Start() {
     connected_.store(false);
+
+#ifndef _WIN32
+    if (url_.rfind("stratum+tcp://", 0) == 0 || url_.rfind("tcp://", 0) == 0) {
+        tcp_mode_ = true;
+        stop_.store(false);
+        std::signal(SIGPIPE, SIG_IGN); // never die on a write to a closed socket
+        tcp_thread_ = std::thread([this]() { RunTcp(); });
+        return true;
+    }
+#endif
 
     auto* ws = new ix::WebSocket();
     ws_ = ws;
@@ -132,7 +155,96 @@ void StratumClient::NoJobWatchdog() {
     }
 }
 
+#ifndef _WIN32
+void StratumClient::RunTcp() {
+    // Parse host:port from stratum+tcp://host:port (default port 3333).
+    std::string u = url_;
+    auto scheme = u.find("://");
+    if (scheme != std::string::npos) u = u.substr(scheme + 3);
+    std::string host = u, port = "3333";
+    auto colon = u.rfind(':');
+    if (colon != std::string::npos) {
+        host = u.substr(0, colon);
+        port = u.substr(colon + 1);
+    }
+
+    while (!stop_.load()) {
+        struct addrinfo hints{};
+        hints.ai_family = AF_UNSPEC;
+        hints.ai_socktype = SOCK_STREAM;
+        struct addrinfo* res = nullptr;
+        if (getaddrinfo(host.c_str(), port.c_str(), &hints, &res) != 0 || !res) {
+            std::cerr << "Pool DNS resolve failed for " << host << " - retrying in 5s\n";
+            std::cerr.flush();
+            std::this_thread::sleep_for(std::chrono::seconds(5));
+            continue;
+        }
+        int fd = -1;
+        for (struct addrinfo* ai = res; ai; ai = ai->ai_next) {
+            fd = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
+            if (fd < 0) continue;
+            if (connect(fd, ai->ai_addr, ai->ai_addrlen) == 0) break;
+            close(fd);
+            fd = -1;
+        }
+        freeaddrinfo(res);
+        if (fd < 0) {
+            std::cerr << "Could not connect to pool (tcp) " << host << ":" << port
+                      << " - retrying in 5s\n";
+            std::cerr.flush();
+            std::this_thread::sleep_for(std::chrono::seconds(5));
+            continue;
+        }
+        int one = 1;
+        setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
+        sock_.store(fd);
+        const bool was = connected_.exchange(true);
+        std::cout << (was ? "Reconnected to pool (tcp).\n" : "Connected to pool (tcp).\n");
+        std::cout << "Connected to pool - waiting for first job...\n";
+        std::cout.flush();
+        SendHello();
+
+        std::string buf;
+        char tmp[4096];
+        while (!stop_.load()) {
+            ssize_t n = recv(fd, tmp, sizeof(tmp), 0);
+            if (n <= 0) break;
+            buf.append(tmp, static_cast<size_t>(n));
+            size_t nl;
+            while ((nl = buf.find('\n')) != std::string::npos) {
+                std::string line = buf.substr(0, nl);
+                buf.erase(0, nl + 1);
+                if (!line.empty() && line.back() == '\r') line.pop_back();
+                if (!line.empty()) ProcessLine(line);
+            }
+        }
+        connected_.store(false);
+        sock_.store(-1);
+        close(fd);
+        if (stop_.load()) break;
+        std::cerr << "Pool connection lost (tcp) - reconnecting in 3s...\n";
+        std::cerr.flush();
+        std::this_thread::sleep_for(std::chrono::seconds(3));
+    }
+}
+#else
+void StratumClient::RunTcp() {}
+#endif
+
 void StratumClient::Stop() {
+#ifndef _WIN32
+    if (tcp_mode_) {
+        stop_.store(true);
+        long long fd = sock_.exchange(-1);
+        if (fd >= 0) {
+            shutdown(static_cast<int>(fd), SHUT_RDWR);
+            close(static_cast<int>(fd));
+        }
+        if (tcp_thread_.joinable()) tcp_thread_.join();
+        connected_.store(false);
+        return;
+    }
+#endif
     if (!ws_) return;
     auto* ws = static_cast<ix::WebSocket*>(ws_);
     ws->stop();
@@ -142,8 +254,23 @@ void StratumClient::Stop() {
 }
 
 void StratumClient::SendLine(const std::string& line) {
-    if (!ws_) return;
     std::lock_guard<std::mutex> lock(send_mu_);
+#ifndef _WIN32
+    if (tcp_mode_) {
+        long long fd = sock_.load();
+        if (fd < 0) return;
+        const std::string out = line + "\n";
+        size_t sent = 0;
+        while (sent < out.size()) {
+            ssize_t n = send(static_cast<int>(fd), out.data() + sent, out.size() - sent,
+                             MSG_NOSIGNAL);
+            if (n <= 0) return;
+            sent += static_cast<size_t>(n);
+        }
+        return;
+    }
+#endif
+    if (!ws_) return;
     static_cast<ix::WebSocket*>(ws_)->send(line + "\n");
 }
 
