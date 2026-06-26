@@ -28,6 +28,7 @@ UPLOAD_ASSETS = [
     "site.webmanifest",
     "bloz-token-icon.svg",
     "bloz-header.css",
+    "styles.css",
 ]
 
 
@@ -61,8 +62,8 @@ def deploy_seed() -> None:
         "rm -f /opt/sites/blockzero/assets/favicon.svg && "
         "python3 /opt/blockzero-ops/scripts/explorer-branding.py mainnet && "
         "systemctl restart blockzero-mainnet-explorer && "
-        "curl -skI 'https://bloz.org/favicon.ico?v=10' | head -3 && "
-        "curl -skI 'https://bloz.org/assets/favicon-32.png?v=10' | head -3",
+        "curl -skI 'https://bloz.org/favicon.ico?v=11' | head -3 && "
+        "curl -skI 'https://bloz.org/assets/favicon-32.png?v=11' | head -3",
         timeout=90,
     )
     text = out.read().decode(errors="replace")
