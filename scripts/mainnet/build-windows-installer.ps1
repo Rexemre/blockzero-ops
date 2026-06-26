@@ -48,14 +48,17 @@ if (Test-Path $vsBase) {
     }
 }
 
-# 3) Run Inno Setup.
+# 3) Ship the GUI under the friendly Block Zero name (parity with the release).
+Copy-Item (Join-Path $rel "bitcoin-qt.exe") (Join-Path $rel "Block Zero.exe") -Force
+
+# 4) Run Inno Setup using the canonical script that ships with blockzero-core.
 $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
 if (-not (Test-Path $iscc)) { $iscc = "$env:ProgramFiles\Inno Setup 6\ISCC.exe" }
 if (-not (Test-Path $iscc)) { throw "Inno Setup (ISCC.exe) not found. Install Inno Setup 6 first." }
 
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
-$iss = Join-Path $PSScriptRoot "..\..\installer\block-zero.iss"
-$iss = (Resolve-Path $iss).Path
+$iss = Join-Path $CoreDir "contrib\windows\block-zero.iss"
+if (-not (Test-Path $iss)) { throw "Installer script not found: $iss" }
 
 & $iscc "/DSourceDir=$rel" "/DAppVersion=$AppVersion" "/O$OutDir" $iss
 if ($LASTEXITCODE -ne 0) { throw "ISCC failed with exit code $LASTEXITCODE" }
