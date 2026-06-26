@@ -36,11 +36,17 @@ Get-ChildItem $SourceDir -Filter "*.exe" | ForEach-Object {
 Get-ChildItem $SourceDir -Filter "*.dll" -ErrorAction SilentlyContinue | ForEach-Object {
     Copy-Item $_.FullName $BinDir -Force
 }
-$platforms = Join-Path $SourceDir "platforms"
-if (Test-Path $platforms) {
-    $destPlatforms = Join-Path $BinDir "platforms"
-    New-Item -ItemType Directory -Force -Path $destPlatforms | Out-Null
-    Copy-Item (Join-Path $platforms "*") $destPlatforms -Force
+# Copy Qt plugin subfolders produced by windeployqt. "tls" and
+# "networkinformation" are required for HTTPS (miner download + pool API);
+# the rest keep the GUI rendering correct.
+$qtPluginDirs = @("platforms", "tls", "networkinformation", "imageformats", "iconengines", "styles", "generic")
+foreach ($sub in $qtPluginDirs) {
+    $src = Join-Path $SourceDir $sub
+    if (Test-Path $src) {
+        $dest = Join-Path $BinDir $sub
+        New-Item -ItemType Directory -Force -Path $dest | Out-Null
+        Copy-Item (Join-Path $src "*") $dest -Force -Recurse
+    }
 }
 
 $qt = Get-Item (Join-Path $BinDir "Block Zero.exe")
