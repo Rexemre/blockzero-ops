@@ -76,5 +76,3 @@ XMRig patch & build: [`xmrig-bz/`](xmrig-bz/)
 | **blockzero-ops** (here) | Scripts & infrastructure |
 | [blockzero-wallet](https://github.com/Rexemre/blockzero-wallet) | Wallet doc hub |
 | [blockzero-bridge](https://github.com/Rexemre/blockzero-bridge) | wBLOZ bridge |
-
-> Copycat sites and third-party pools are **not affiliated** with Block Zero. [Warning →](https://github.com/Rexemre/blockzero-docs/blob/main/official-links.md#warning-copycat-sites--unofficial-services)
