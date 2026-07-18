@@ -1,0 +1,34 @@
+Betreff: Integration Block Zero (BLOZ) — CPU RandomX / Custom Miner Package
+
+Hallo Hive OS Team,
+
+ich vertrete Block Zero (BLOZ), eine öffentliche CPU-Mining-Blockchain mit RandomX
+(Algorithmus: rx/blockzero, 80-Byte-Bitcoin-Header).
+
+Wir möchten Hive-Nutzern ein offizielles Mining anbieten und haben ein fertiges
+Hive-Custom-Miner-Paket vorbereitet:
+
+  Miner-Name:     bzxmrig
+  Paket:          bzxmrig-6.26.0.tar.gz (Scripts + gepatchtes XMRig)
+  Pool:           pool.bloz.org:3334
+  Wallet-Format:  bz1…Adresse.Worker
+  Pass:           x
+  Nur CPU        (kein GPU-Algo)
+
+Links:
+  Mining-Anleitung:  https://github.com/Rexemre/blockzero-docs/blob/main/how-to-mine.md
+  Miner-Releases:    https://github.com/Rexemre/blockzero-ops/releases
+  Pool-Dashboard:    https://pool.bloz.org
+  Website:           https://bloz.org
+
+Könnten Sie BLOZ als Coin-Preset bzw. unseren Custom Miner in die offizielle
+Miner-Liste aufnehmen? Das Paket folgt Ihrer Custom-Miner-Spezifikation
+(h-manifest.conf, h-config.sh, h-run.sh, h-stats.sh).
+
+Gerne stellen wir Test-Wallet, Pool-Zugang oder technischen Ansprechpartner bereit.
+
+Mit freundlichen Grüßen
+Marlon Morales
+Block Zero
+https://bloz.org
+[deine Kontakt-E-Mail einfügen]

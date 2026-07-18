@@ -1,0 +1,44 @@
+name: build-hive-bzxmrig
+
+on:
+  push:
+    tags: ['hive-bzxmrig-v*']
+  workflow_dispatch:
+    inputs:
+      xmrig_tag:
+        description: 'Source XMRig release tag'
+        required: true
+        default: 'xmrig-v6.26.0'
+      version:
+        description: 'Hive package version (no dashes)'
+        required: true
+        default: '6.26.0'
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Hive custom miner tarball
+        run: |
+          TAG="${{ github.event.inputs.xmrig_tag }}"
+          VER="${{ github.event.inputs.version }}"
+          if [[ "${{ github.ref }}" == refs/tags/hive-bzxmrig-v* ]]; then
+            VER="${GITHUB_REF_NAME#hive-bzxmrig-v}"
+            TAG="xmrig-v${VER}"
+          fi
+          bash hive/build-package.sh "$VER" "$TAG"
+      - name: Publish release asset
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: hive/bzxmrig-*.tar.gz
+          body: |
+            Hive OS custom miner for Block Zero CPU mining (`rx/blockzero`).
+
+            **Flight sheet:** Coin CUSTOM → Miner custom → name `bzxmrig`
+            Pool `pool.bloz.org:3334`, wallet `%WAL%.%WORKER_NAME%`, pass `x`
+
+            Install on rig: `custom-get <this-tarball-url> -f`
+
+            See [hive/README.md](https://github.com/${{ github.repository }}/blob/main/hive/README.md).

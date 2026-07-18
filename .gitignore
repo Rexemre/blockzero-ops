@@ -1,0 +1,7 @@
+# Twitter bot lives in private repo blockzero-twitter-bot only
+twitter-bot/
+*twitter-bot*
+scripts/mainnet/deploy-twitter-bot.py
+
+# Hive OS custom miner build artifacts
+hive/*.tar.gz
