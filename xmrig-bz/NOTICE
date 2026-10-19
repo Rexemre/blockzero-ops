@@ -1,0 +1,5 @@
+This directory contains patch.py, a patch for XMRig (https://github.com/xmrig/xmrig),
+licensed under the GNU General Public License v3.0 or later (see LICENSE).
+Binaries built with this patch are derivative works of XMRig and may only be
+redistributed together with their complete corresponding source code,
+including this patch (GPLv3 §6).

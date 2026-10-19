@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Copyright (c) 2026 Block Zero / Marlon Morales
+#
+# This program patches XMRig (https://github.com/xmrig/xmrig), which is
+# licensed under the GNU General Public License v3.0 or later. As a
+# derivative work of and modification to XMRig, this patch script and any
+# binaries built using it are likewise licensed under the GPL-3.0-or-later.
+# See the LICENSE file in this directory for the full license text.
 """Patch stock XMRig (v6.26.0) to add the `rx/blockzero` algorithm.
 
 Block Zero uses the standard tevador/RandomX hash function (= XMRig's reference
