@@ -17,7 +17,7 @@ try {
     Write-Host ""
     Write-Host "If the VPS node is running (systemctl status blockzero-testnet), open TCP $Port"
     Write-Host "in the IONOS cloud firewall: my.ionos.de -> Server & Cloud -> Netzwerk ->"
-    Write-Host "Firewall-Richtlinien -> policy assigned to MarlonMorales -> add inbound TCP $Port."
+    Write-Host "Firewall-Richtlinien -> policy assigned to server -> add inbound TCP $Port."
     exit 1
 }
 catch {

@@ -22,7 +22,7 @@ sleep 2
 pkill -f 'generatetoaddress.*tbz1' 2>/dev/null || true
 sleep 1
 MADDR="tbz1qug7eyh8pcspr0j5tpvgq6448y459dcq358e6rv"
-nohup $CLI -testnet -datadir=/home/marlon/.bzero -rpcport=18211 -rpcwallet=mining \
+nohup $CLI -testnet -datadir=/home/USER/.bzero -rpcport=18211 -rpcwallet=mining \
   generatetoaddress 1 "$MADDR" 500000000 > /tmp/bz-mine.log 2>&1 &
 echo "testnet mining pid: $!"
 echo "log: /tmp/bz-mine.log"

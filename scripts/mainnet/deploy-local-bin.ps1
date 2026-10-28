@@ -2,7 +2,7 @@
 # Use this after a local MSVC build OR to deploy from an extracted release folder.
 #
 # Examples:
-#   .\deploy-local-bin.ps1 -SourceDir C:\Users\Marlon\blockzero\blockzero-core\build\bin\Release
+#   .\deploy-local-bin.ps1 -SourceDir C:\Users\USER\blockzero\blockzero-core\build\bin\Release
 #   .\deploy-local-bin.ps1 -SourceDir "$env:LOCALAPPDATA\BlockZero\blockzero-v1.0.0-rc21-windows-x64\bin"
 #
 param(

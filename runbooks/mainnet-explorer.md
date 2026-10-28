@@ -16,7 +16,7 @@ A web block explorer for Block Zero **mainnet**, using a dedicated
 | `/opt/btc-rpc-explorer-mainnet/` | mainnet explorer (git clone + `npm install --omit=dev`) |
 | `/opt/btc-rpc-explorer-mainnet/.env` | mainnet config (see `systemd/blockzero-mainnet-explorer.env.example`) |
 | `/etc/systemd/system/blockzero-mainnet-explorer.service` | systemd unit |
-| `/opt/sites/blockzero-mainnet-explorer/Caddyfile.snippet` | Caddy vhost (MarlonMoralesServer repo) |
+| `/opt/sites/blockzero-mainnet-explorer/Caddyfile.snippet` | Caddy vhost (ServerRepo repo) |
 
 The explorer authenticates to bitcoind via the RPC cookie
 `/opt/bzero-mainnet/.cookie`, so no password is stored.

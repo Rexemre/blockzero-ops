@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# Copyright (c) 2026 Block Zero / Marlon Morales
+# Copyright (c) 2026 Block Zero / rexemre
 #
 # This program patches XMRig (https://github.com/xmrig/xmrig), which is
 # licensed under the GNU General Public License v3.0 or later. As a

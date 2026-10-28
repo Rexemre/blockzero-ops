@@ -11,11 +11,11 @@ SEED = "217.160.46.61"
 POOL = "217.154.169.211"
 KEY = Path.home() / ".ssh" / "id_ed25519"
 
-ASSETS = Path(r"C:\Users\Marlon\MarlonMoralesServer\sites\blockzero\assets")
-SITE = Path(r"C:\Users\Marlon\MarlonMoralesServer\sites\blockzero")
-POOL_WEB = Path(r"C:\Users\Marlon\blockzero\blockzero-pool\web\index.html")
-BRIDGE_WEB = Path(r"C:\Users\Marlon\blockzero\blockzero-bridge\web\index.html")
-BRANDING = Path(r"C:\Users\Marlon\blockzero\blockzero-ops\scripts\explorer-branding.py")
+ASSETS = Path(r"C:\Users\USER\ServerRepo\sites\blockzero\assets")
+SITE = Path(r"C:\Users\USER\ServerRepo\sites\blockzero")
+POOL_WEB = Path(r"C:\Users\USER\blockzero\blockzero-pool\web\index.html")
+BRIDGE_WEB = Path(r"C:\Users\USER\blockzero\blockzero-bridge\web\index.html")
+BRANDING = Path(r"C:\Users\USER\blockzero\blockzero-ops\scripts\explorer-branding.py")
 
 UPLOAD_ASSETS = [
     "bloz-logo-nav.png",

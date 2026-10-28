@@ -1,7 +1,7 @@
 # Local Windows GUI build (mirrors .github/workflows/release.yml windows-x64 job).
 # Requires: Visual Studio 2022+ with "Desktop development with C++", Python 3, pip.
 param(
-    [string]$CoreDir = "C:\Users\Marlon\blockzero\blockzero-core"
+    [string]$CoreDir = "C:\Users\USER\blockzero\blockzero-core"
 )
 
 $ErrorActionPreference = "Stop"

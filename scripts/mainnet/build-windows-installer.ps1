@@ -7,9 +7,9 @@
 # Usage:
 #   .\build-windows-installer.ps1 -AppVersion 1.0.0-rc22
 param(
-    [string]$CoreDir = "C:\Users\Marlon\blockzero\blockzero-core",
+    [string]$CoreDir = "C:\Users\USER\blockzero\blockzero-core",
     [string]$AppVersion = "1.0.0",
-    [string]$OutDir = "C:\Users\Marlon\blockzero\blockzero-core\build\installer"
+    [string]$OutDir = "C:\Users\USER\blockzero\blockzero-core\build\installer"
 )
 
 $ErrorActionPreference = "Stop"

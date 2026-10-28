@@ -88,6 +88,6 @@ Write-Host ""
 Write-Host "Sync not complete yet."
 Write-Host "Check: bitcoin-cli -testnet -datadir=`"$DataDir`" getconnectioncount  (need >= 1)"
 Write-Host "On Windows, start the WSL bridge first:"
-Write-Host "  wsl -e bash -lc 'bitcoind -testnet -datadir=/home/marlon/.bzero -daemon'"
+Write-Host "  wsl -e bash -lc 'bitcoind -testnet -datadir=/home/USER/.bzero -daemon'"
 Write-Host "Or wait until VPS seed 217.160.46.61:18210 is reachable."
 exit 1

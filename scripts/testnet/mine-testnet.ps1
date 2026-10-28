@@ -243,7 +243,7 @@ function Wait-ForPublicChain {
 No connection to the public testnet (0 peers). Do NOT mine solo - that creates a fork.
 
 1. Start WSL bridge (PowerShell):
-   wsl -e bash -lc '/home/marlon/blockzero-core/build/bin/bitcoind -testnet -datadir=/home/marlon/.bzero -daemon'
+   wsl -e bash -lc '/home/USER/blockzero-core/build/bin/bitcoind -testnet -datadir=/home/USER/.bzero -daemon'
 2. Resync:
    .\resync-testnet.ps1
 3. Mine:

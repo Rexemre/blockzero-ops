@@ -11,7 +11,7 @@ import paramiko
 HOST = "217.154.169.211"
 USER = "root"
 REMOTE = "/opt/blockzero-pool/engine/ws_bridge.py"
-LOCAL = Path(r"C:\Users\Marlon\blockzero\blockzero-pool\engine\ws_bridge.py")
+LOCAL = Path(r"C:\Users\USER\blockzero\blockzero-pool\engine\ws_bridge.py")
 
 
 def main() -> int:

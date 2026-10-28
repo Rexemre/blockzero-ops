@@ -15,7 +15,7 @@ pointed at the VPS seed node's RPC. No custom code.
 | `/opt/btc-rpc-explorer/` | the explorer (git clone + `npm install --omit=dev`) |
 | `/opt/btc-rpc-explorer/.env` | config (see `systemd/blockzero-explorer.env.example`) |
 | `/etc/systemd/system/blockzero-explorer.service` | systemd unit |
-| `/opt/sites/blockzero-explorer/Caddyfile.snippet` | Caddy vhost (in MarlonMoralesServer repo) |
+| `/opt/sites/blockzero-explorer/Caddyfile.snippet` | Caddy vhost (in ServerRepo repo) |
 
 The explorer authenticates to bitcoind via the RPC cookie
 `/opt/bzero-testnet/testnet3/.cookie`, so no password is stored.

@@ -10,10 +10,10 @@ try:
 except ImportError:
     raise SystemExit("pip install Pillow")
 
-DOWNLOADS = Path(r"C:\Users\Marlon\Downloads")
-SITE_ASSETS = Path(r"C:\Users\Marlon\MarlonMoralesServer\sites\blockzero\assets")
+DOWNLOADS = Path(r"C:\Users\USER\Downloads")
+SITE_ASSETS = Path(r"C:\Users\USER\ServerRepo\sites\blockzero\assets")
 SITE_ROOT = SITE_ASSETS.parent
-OPS_ASSETS = Path(r"C:\Users\Marlon\blockzero\blockzero-ops\assets")
+OPS_ASSETS = Path(r"C:\Users\USER\blockzero\blockzero-ops\assets")
 
 FAVICON_VER = "10"
 FAVICON_Q = f"?v={FAVICON_VER}"

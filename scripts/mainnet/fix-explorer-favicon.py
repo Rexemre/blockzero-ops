@@ -11,7 +11,7 @@ except ImportError:
 
 SEED = "217.160.46.61"
 KEY = Path.home() / ".ssh/id_ed25519"
-ASSETS = Path(r"C:\Users\Marlon\MarlonMoralesServer\sites\blockzero\assets")
+ASSETS = Path(r"C:\Users\USER\ServerRepo\sites\blockzero\assets")
 EXPLORER_ICONS = "/opt/btc-rpc-explorer-mainnet/public/img/network-mainnet"
 LAYOUT = "/opt/btc-rpc-explorer-mainnet/views/layout.pug"
 
@@ -67,7 +67,7 @@ sftp.close()
 
 sftp = c.open_sftp()
 sftp.put(
-    str(Path(r"C:\Users\Marlon\blockzero\blockzero-ops\scripts\mainnet\fix-explorer-layout.py")),
+    str(Path(r"C:\Users\USER\blockzero\blockzero-ops\scripts\mainnet\fix-explorer-layout.py")),
     "/root/fix-explorer-layout.py",
 )
 sftp.close()

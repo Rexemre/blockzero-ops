@@ -1,7 +1,7 @@
 #!/bin/bash
 CLI=~/blockzero-core/build/bin/bitcoin-cli
 ADDR=tbz1qug7eyh8pcspr0j5tpvgq6448y459dcq358e6rv
-DATADIR=/home/marlon/.bzero
+DATADIR=/home/USER/.bzero
 MAXTRIES=500000000
 while true; do
   HEIGHT=$($CLI -testnet -datadir=$DATADIR -rpcport=18211 getblockcount 2>/dev/null)

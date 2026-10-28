@@ -8,7 +8,7 @@ How to run a persistent, reachable Block Zero **testnet** node. Two host options
 
 P2P port: `18210` (testnet). RPC port: `18211` (local only).
 
-**Production seed:** `217.160.46.61:18210` on the IONOS VPS (`mail.marlonmorales.ch`).
+**Production seed:** `217.160.46.61:18210` on the IONOS VPS (`mail.example.org`).
 
 ---
 
@@ -46,7 +46,7 @@ The VPS uses an **IONOS cloud firewall policy** that filters traffic *before* uf
 Both must allow TCP **18210**:
 
 1. `my.ionos.de` → Server & Cloud → Netzwerk → Firewall-Richtlinien
-2. Open the policy assigned to server **MarlonMorales**
+2. Open the policy assigned to server **server**
 3. Add inbound rule: TCP **18210**, source `0.0.0.0/0`
 
 Verify from your PC:
@@ -87,7 +87,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 User=marlon
-ExecStart=/home/marlon/blockzero-core/build/bin/bitcoind -testnet -datadir=/home/marlon/.bzero
+ExecStart=/home/USER/blockzero-core/build/bin/bitcoind -testnet -datadir=/home/USER/.bzero
 Restart=on-failure
 RestartSec=10
 
@@ -110,8 +110,8 @@ Health checks:
 
 ```bash
 cd ~/blockzero-core
-./build/bin/bitcoin-cli -testnet -datadir=/home/marlon/.bzero getblockchaininfo
-./build/bin/bitcoin-cli -testnet -datadir=/home/marlon/.bzero getconnectioncount
+./build/bin/bitcoin-cli -testnet -datadir=/home/USER/.bzero getblockchaininfo
+./build/bin/bitcoin-cli -testnet -datadir=/home/USER/.bzero getconnectioncount
 ```
 
 ---
@@ -151,7 +151,7 @@ that launches WSL (systemd then starts the node) and refreshes the port-proxy:
 
 ```powershell
 # starts WSL (-> systemd -> blockzero-testnet) and fixes the portproxy
-schtasks /Create /TN "BlockZeroTestnet" /TR "powershell -ExecutionPolicy Bypass -File C:\Users\Marlon\blockzero\blockzero-ops\scripts\wsl-portproxy.ps1" /SC ONLOGON /RL HIGHEST /F
+schtasks /Create /TN "BlockZeroTestnet" /TR "powershell -ExecutionPolicy Bypass -File C:\Users\USER\blockzero\blockzero-ops\scripts\wsl-portproxy.ps1" /SC ONLOGON /RL HIGHEST /F
 ```
 
 ---
