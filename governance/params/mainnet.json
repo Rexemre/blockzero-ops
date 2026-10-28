@@ -1,0 +1,24 @@
+{
+  "_hinweis": "BZG1-Parameter Mainnet, ENTWURF. CYCLE0 und bridge_reserve muessen vor dem ersten echten Zyklus festgelegt und veroeffentlicht werden.",
+  "network": "main",
+  "cycle0": 18144,
+  "cycle_len": 4032,
+  "submit_len": 2016,
+  "vote_len": 1872,
+  "min_age": 1008,
+  "coinbase_maturity": 100,
+  "proposal_fee_sat": 1000000000,
+  "max_proposals": 20,
+  "max_tranches": 12,
+  "quorum_pct": 5,
+  "majority_pct": 60,
+  "min_yes_tx": 10,
+  "whale_tx_cap_pct": 5,
+  "proposal_cap_pct": 10,
+  "cycle_budget_pct": 5,
+  "fund_script": "0014db3df23b245b8877f93a203c712597bd099a1144",
+  "excluded_scripts": {
+    "0014db3df23b245b8877f93a203c712597bd099a1144": "Community Fund (Dev & Growth Fund)"
+  },
+  "_offen_excluded": "Bridge-Reserve (alle Adressen der Bridge-Wallet) und Pool-Hotwallet hier als scriptPubKey-Hex eintragen und veroeffentlichen."
+}

@@ -1,0 +1,23 @@
+{
+  "_hinweis": "BZG1-Parameter Regtest: gleiche Regeln, kurze Fenster. Node mit -testactivationheight=devfund@1 starten, damit der Fonds Zufluesse hat.",
+  "network": "regtest",
+  "cycle0": 300,
+  "cycle_len": 40,
+  "submit_len": 15,
+  "vote_len": 20,
+  "min_age": 10,
+  "coinbase_maturity": 100,
+  "proposal_fee_sat": 100000000,
+  "max_proposals": 20,
+  "max_tranches": 12,
+  "quorum_pct": 5,
+  "majority_pct": 60,
+  "min_yes_tx": 3,
+  "whale_tx_cap_pct": 5,
+  "proposal_cap_pct": 10,
+  "cycle_budget_pct": 5,
+  "fund_script": "0014db3df23b245b8877f93a203c712597bd099a1144",
+  "excluded_scripts": {
+    "0014db3df23b245b8877f93a203c712597bd099a1144": "Community Fund (Dev & Growth Fund)"
+  }
+}
