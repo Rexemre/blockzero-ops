@@ -1,0 +1,97 @@
+/* BLOCK ZERO explorer theme — design tokens shared with bloz.org */
+:root {
+	--bz-void: #05070A;
+	--bz-steel: #11161D;
+	--bz-steel-2: #161d27;
+	--bz-blue: #3FA9FF;
+	--bz-cyan: #6FE7FF;
+	--bz-silver: #BFC7D5;
+	--bz-white: #F5F7FA;
+	--bz-muted: #79849a;
+	--bz-line: rgba(111, 231, 255, 0.14);
+}
+
+body { background-color: var(--bz-void) !important; font-family: "Inter", system-ui, sans-serif !important; }
+.bg-header-footer { background-color: var(--bz-void) !important; }
+nav.navbar.bg-header-footer { border-bottom: 1px solid var(--bz-line); }
+footer.bg-header-footer, footer { border-top: 1px solid var(--bz-line); }
+.navbar-brand span.fw-light { font-family: "Orbitron", "Rajdhani", sans-serif; font-size: 0.95rem; letter-spacing: 0.1em; color: var(--bz-silver) !important; }
+
+.card { background-color: var(--bz-steel) !important; border: 1px solid var(--bz-line) !important; border-radius: 0 !important; }
+.card-header { background-color: var(--bz-steel-2) !important; border-bottom: 1px solid var(--bz-line) !important; font-family: "Rajdhani", sans-serif; letter-spacing: 0.06em; text-transform: uppercase; }
+.modal-content { background-color: var(--bz-steel) !important; border: 1px solid var(--bz-line) !important; }
+
+h1, h2, h3, .h1, .h2, .h3 { font-family: "Orbitron", "Rajdhani", sans-serif; letter-spacing: 0.04em; }
+
+.card a, .modal a, .dropdown-menu a, footer a, table a, p a, li a { color: var(--bz-blue); }
+.card a:hover, .modal a:hover, .dropdown-menu a:hover, footer a:hover, table a:hover, p a:hover, li a:hover { color: var(--bz-cyan); }
+
+.btn-primary { background-color: rgba(63, 169, 255, 0.10) !important; border-color: var(--bz-blue) !important; color: var(--bz-white) !important; border-radius: 0 !important; }
+.btn-primary:hover { background-color: rgba(63, 169, 255, 0.22) !important; box-shadow: 0 0 18px rgba(63, 169, 255, 0.3); }
+.form-control, .input-group-text { background-color: var(--bz-steel) !important; border-color: var(--bz-line) !important; color: var(--bz-white) !important; border-radius: 0 !important; }
+.dropdown-menu { background-color: var(--bz-steel-2) !important; border: 1px solid var(--bz-line) !important; }
+.dropdown-item { color: var(--bz-silver) !important; }
+.dropdown-item:hover, .dropdown-item:focus { background-color: rgba(111, 231, 255, 0.08) !important; color: var(--bz-cyan) !important; }
+.badge.bg-primary { background-color: rgba(63, 169, 255, 0.18) !important; border: 1px solid var(--bz-blue); color: var(--bz-cyan) !important; }
+
+/* Suite nav is canonical branding — keep search + tool menus, hide duplicate logo/title */
+nav.navbar.bg-header-footer .navbar-brand { display: none !important; }
+nav.navbar.bg-header-footer { padding-top: 0.35rem; padding-bottom: 0.35rem; }
+nav.navbar.bg-header-footer .navbar-collapse { justify-content: flex-end; }
+
+/* Mobile: search + explorer menu toggler in one row */
+@media (max-width: 991.98px) {
+	nav.navbar.bg-header-footer > .container {
+		display: flex !important;
+		flex-wrap: wrap !important;
+		align-items: stretch !important;
+		gap: 0 !important;
+		max-width: 100% !important;
+	}
+
+	nav.navbar.bg-header-footer .bz-explorer-mobile-row {
+		display: flex !important;
+		flex: 0 0 100% !important;
+		width: 100% !important;
+		align-items: center !important;
+		gap: 8px !important;
+		min-width: 0 !important;
+		order: 1 !important;
+	}
+
+	nav.navbar.bg-header-footer .bz-explorer-mobile-row form.bz-mobile-search {
+		display: flex !important;
+		flex: 1 1 auto !important;
+		min-width: 0 !important;
+		width: auto !important;
+		margin: 0 !important;
+	}
+
+	nav.navbar.bg-header-footer .bz-explorer-mobile-row .input-group {
+		display: flex !important;
+		flex-wrap: nowrap !important;
+		width: 100% !important;
+		min-width: 0 !important;
+	}
+
+	nav.navbar.bg-header-footer .bz-explorer-mobile-row .form-control {
+		min-width: 0 !important;
+		flex: 1 1 auto !important;
+		width: 1% !important;
+	}
+
+	nav.navbar.bg-header-footer .bz-explorer-mobile-row .navbar-toggler {
+		flex: 0 0 44px !important;
+		width: 44px !important;
+		height: 44px !important;
+		margin-left: 0 !important;
+		padding: 0 !important;
+		border-color: var(--bz-line) !important;
+	}
+
+	nav.navbar.bg-header-footer .navbar-collapse {
+		flex: 0 0 100% !important;
+		width: 100% !important;
+		order: 2 !important;
+	}
+}
