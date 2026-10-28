@@ -96,7 +96,7 @@ Deploy: `python blockzero-ops/scripts/mainnet/deploy-pool-stratum.py` (requires 
 | Setting | Default |
 |---------|---------|
 | Scheme | PPLNS, window `4000000` |
-| Fee | `2%` (`POOL_FEE_BPS=200`) |
+| Fee | `0%` (`POOL_FEE_BPS=0`) |
 | Min payout | 0.5 BLOZ (`MIN_PAYOUT_SATS=50000000`) |
 | DB | `/opt/blockzero-pool/data/pool.db` |
 

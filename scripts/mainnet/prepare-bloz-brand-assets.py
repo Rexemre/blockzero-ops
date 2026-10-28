@@ -15,11 +15,11 @@ SITE_ASSETS = Path(r"C:\Users\USER\ServerRepo\sites\blockzero\assets")
 SITE_ROOT = SITE_ASSETS.parent
 OPS_ASSETS = Path(r"C:\Users\USER\blockzero\blockzero-ops\assets")
 
-FAVICON_VER = "10"
+FAVICON_VER = "11"
 FAVICON_Q = f"?v={FAVICON_VER}"
 
 NAVBAR_SRC = DOWNLOADS / "ChatGPT Image Jun 13, 2026, 02_17_27 PM.png"
-ICON_SRC = DOWNLOADS / "favicon-15-06V2.png"
+ICON_SRC = DOWNLOADS / "icon2.png"
 BSCSCAN_SRC = DOWNLOADS / "block_zero_0_only_bscscan_logo.svg"
 
 

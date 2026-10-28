@@ -5,3 +5,11 @@ scripts/mainnet/deploy-twitter-bot.py
 
 # Hive OS custom miner build artifacts
 hive/*.tar.gz
+
+# Laufzeit, lokale Einmal-Skripte (können Zugangsdaten enthalten)
+__pycache__/
+*.pyc
+.env
+.env.*
+!*.env.example
+scripts/mainnet/_*.py

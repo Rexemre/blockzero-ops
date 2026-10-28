@@ -15,7 +15,7 @@ ASSETS = Path(r"C:\Users\USER\ServerRepo\sites\blockzero\assets")
 EXPLORER_ICONS = "/opt/btc-rpc-explorer-mainnet/public/img/network-mainnet"
 LAYOUT = "/opt/btc-rpc-explorer-mainnet/views/layout.pug"
 
-FAVICON_Q = "?v=10"
+FAVICON_Q = "?v=11"
 FAVICON_LINKS = (
     f'\t\tlink(rel="icon", href="https://bloz.org/favicon.ico{FAVICON_Q}", sizes="any")\n'
     f'\t\tlink(rel="icon", type="image/png", sizes="32x32", href="https://bloz.org/assets/favicon-32.png{FAVICON_Q}")\n'

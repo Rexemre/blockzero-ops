@@ -93,7 +93,99 @@ h1, h2, h3, .h1, .h2, .h3 { font-family: "Orbitron", "Rajdhani", sans-serif; let
 nav.navbar.bg-header-footer .navbar-brand { display: none !important; }
 nav.navbar.bg-header-footer { padding-top: 0.35rem; padding-bottom: 0.35rem; }
 nav.navbar.bg-header-footer .navbar-collapse { justify-content: flex-end; }
+
+/* Mobile: search + explorer menu toggler in one row */
+@media (max-width: 991.98px) {
+	nav.navbar.bg-header-footer > .container {
+		display: flex !important;
+		flex-wrap: wrap !important;
+		align-items: stretch !important;
+		gap: 0 !important;
+		max-width: 100% !important;
+	}
+
+	nav.navbar.bg-header-footer .bz-explorer-mobile-row {
+		display: flex !important;
+		flex: 0 0 100% !important;
+		width: 100% !important;
+		align-items: center !important;
+		gap: 8px !important;
+		min-width: 0 !important;
+		order: 1 !important;
+	}
+
+	nav.navbar.bg-header-footer .bz-explorer-mobile-row form.bz-mobile-search {
+		display: flex !important;
+		flex: 1 1 auto !important;
+		min-width: 0 !important;
+		width: auto !important;
+		margin: 0 !important;
+	}
+
+	nav.navbar.bg-header-footer .bz-explorer-mobile-row .input-group {
+		display: flex !important;
+		flex-wrap: nowrap !important;
+		width: 100% !important;
+		min-width: 0 !important;
+	}
+
+	nav.navbar.bg-header-footer .bz-explorer-mobile-row .form-control {
+		min-width: 0 !important;
+		flex: 1 1 auto !important;
+		width: 1% !important;
+	}
+
+	nav.navbar.bg-header-footer .bz-explorer-mobile-row .navbar-toggler {
+		flex: 0 0 44px !important;
+		width: 44px !important;
+		height: 44px !important;
+		margin-left: 0 !important;
+		padding: 0 !important;
+		border-color: var(--bz-line) !important;
+	}
+
+	nav.navbar.bg-header-footer .navbar-collapse {
+		flex: 0 0 100% !important;
+		width: 100% !important;
+		order: 2 !important;
+	}
+}
 """
+
+
+def mobile_search_row_pug() -> str:
+    """Mobile search + menu toggler grouped in one flex row."""
+    return (
+        "\t\t\t\t.bz-explorer-mobile-row.d-lg-none\n"
+        "\t\t\t\t\tform.form-inline.bz-mobile-search(method=\"post\", action=\"./search\")\n"
+        "\t\t\t\t\t\tinput(type=\"hidden\", name=\"_csrf\", value=csrfToken)\n"
+        "\t\t\t\t\t\t.input-group\n"
+        "\t\t\t\t\t\t\tinput.form-control(type=\"text\", name=\"query\", placeholder=\"height/hash/txid...\", value=(query), autocapitalize=\"off\", autocomplete=\"off\", autocorrect=\"off\", spellcheck=\"false\")\n"
+        "\t\t\t\t\t\t\tbutton.btn.btn-primary(type=\"submit\", aria-label=\"Search\")\n"
+        "\t\t\t\t\t\t\t\ti.bi-search\n"
+        "\t\t\t\t\tbutton.navbar-toggler.navbar-toggler-end(type=\"button\", data-bs-toggle=\"collapse\", data-bs-target=\"#navbarNav\", aria-label=\"collapse navigation\")\n"
+        "\t\t\t\t\t\tspan.navbar-toggler-icon\n"
+        "\n"
+        "\t\t\t\t.collapse.navbar-collapse(id=\"navbarNav\")"
+    )
+
+
+MOBILE_SEARCH_FORM_BLOCK = (
+    "\t\t\t\tform.form-inline.d-lg-none.bz-mobile-search(method=\"post\", action=\"./search\")\n"
+    "\t\t\t\t\tinput(type=\"hidden\", name=\"_csrf\", value=csrfToken)\n"
+    "\t\t\t\t\t.input-group\n"
+    "\t\t\t\t\t\tinput.form-control(type=\"text\", name=\"query\", placeholder=\"height/hash/txid...\", value=(query), autocapitalize=\"off\", autocomplete=\"off\", autocorrect=\"off\", spellcheck=\"false\")\n"
+    "\t\t\t\t\t\t\n"
+    "\t\t\t\t\t\tbutton.btn.btn-primary(type=\"submit\", aria-label=\"Search\")\n"
+    "\t\t\t\t\t\t\ti.bi-search\n"
+)
+
+NAVBAR_TOGGLER_BLOCK = (
+    "\t\t\t\tbutton.navbar-toggler.navbar-toggler-end(type=\"button\", data-bs-toggle=\"collapse\", data-bs-target=\"#navbarNav\", aria-label=\"collapse navigation\")\n"
+    "\t\t\t\t\tspan.navbar-toggler-icon\n"
+    "\t\t\t\t\t\n"
+    "\t\t\t\t.collapse.navbar-collapse(id=\"navbarNav\")"
+)
 
 
 def suite_nav_pug(explorer_url: str) -> str:
@@ -195,16 +287,16 @@ def currency_patches(base: str, cfg: dict) -> dict[str, list[tuple[str, str, int
 def theme_patches(base: str, cfg: dict) -> dict[str, list[tuple[str, str, int]]]:
     """Inject the Block Zero theme css + shared suite nav into layout.pug."""
     css_link = '\t\tlink(rel="stylesheet", href="./style/bloz-theme.css")'
-    header_css = '\t\tlink(rel="stylesheet", href="https://bloz.org/assets/bloz-header.css?v=3")'
+    header_css = '\t\tlink(rel="stylesheet", href="https://bloz.org/assets/bloz-header.css?v=12")'
     favicon_links = (
-        '\t\tlink(rel="icon", href="https://bloz.org/favicon.ico?v=10", sizes="any")\n'
-        '\t\tlink(rel="icon", type="image/png", sizes="32x32", href="https://bloz.org/assets/favicon-32.png?v=10")\n'
-        '\t\tlink(rel="icon", type="image/png", href="https://bloz.org/assets/favicon.png?v=10")\n'
-        '\t\tlink(rel="apple-touch-icon", href="https://bloz.org/assets/apple-touch-icon.png?v=10")'
+        '\t\tlink(rel="icon", href="https://bloz.org/favicon.ico?v=11", sizes="any")\n'
+        '\t\tlink(rel="icon", type="image/png", sizes="32x32", href="https://bloz.org/assets/favicon-32.png?v=11")\n'
+        '\t\tlink(rel="icon", type="image/png", href="https://bloz.org/assets/favicon.png?v=11")\n'
+        '\t\tlink(rel="apple-touch-icon", href="https://bloz.org/assets/apple-touch-icon.png?v=11")'
     )
     btc_favicon_16 = '\t\tlink(rel="icon", type="image/png", sizes="16x16", href=assetUrl(`./img/network-${network}/favicon-16x16.png`))'
     btc_favicon_shortcut = '\t\tlink(rel="shortcut icon", href=assetUrl(`./img/network-${network}/favicon.ico`))'
-    header_js = '\t\tscript(src="https://bloz.org/assets/bloz-header.js" defer)'
+    header_js = '\t\tscript(src="https://bloz.org/assets/bloz-header.js?v=8" defer)'
     font_links = (
         '\t\tlink(rel="preconnect", href="https://fonts.googleapis.com")\n'
         '\t\tlink(rel="preconnect", href="https://fonts.gstatic.com", crossorigin)\n'
@@ -220,12 +312,22 @@ def theme_patches(base: str, cfg: dict) -> dict[str, list[tuple[str, str, int]]]
             ),
             (
                 'link(rel="stylesheet", href="https://bloz.org/assets/bloz-header.css")',
-                'link(rel="stylesheet", href="https://bloz.org/assets/bloz-header.css?v=3")',
+                'link(rel="stylesheet", href="https://bloz.org/assets/bloz-header.css?v=12")',
                 0,
             ),
             (
                 'link(rel="stylesheet", href="https://bloz.org/assets/bloz-header.css?v=2")',
+                'link(rel="stylesheet", href="https://bloz.org/assets/bloz-header.css?v=12")',
+                0,
+            ),
+            (
                 'link(rel="stylesheet", href="https://bloz.org/assets/bloz-header.css?v=3")',
+                'link(rel="stylesheet", href="https://bloz.org/assets/bloz-header.css?v=12")',
+                0,
+            ),
+            (
+                'link(rel="stylesheet", href="https://bloz.org/assets/bloz-header.css?v=8")',
+                'link(rel="stylesheet", href="https://bloz.org/assets/bloz-header.css?v=12")',
                 0,
             ),
             (
@@ -236,20 +338,35 @@ def theme_patches(base: str, cfg: dict) -> dict[str, list[tuple[str, str, int]]]
             (btc_favicon_16, "", 0),
             (btc_favicon_shortcut, "", 0),
             (
-                f'\t\tlink(rel="icon", type="image/png", sizes="64x64", href="https://bloz.org/assets/favicon.png?v=10")',
+                f'\t\tlink(rel="icon", type="image/png", sizes="64x64", href="https://bloz.org/assets/favicon.png?v=11")',
                 "",
                 0,
             ),
             ("+themeCss", f"+themeCss\n{css_link}\n{header_css}", 1),
             (
                 '+themeCss\n\t\tlink(rel="stylesheet", href="./style/bloz-theme.css")\n\t\tlink(rel="stylesheet", href="https://bloz.org/assets/bloz-header.css")\n\t\tlink(rel="stylesheet", href="./style/bloz-theme.css")',
-                '+themeCss\n\t\tlink(rel="stylesheet", href="./style/bloz-theme.css")\n\t\tlink(rel="stylesheet", href="https://bloz.org/assets/bloz-header.css?v=3")',
+                '+themeCss\n\t\tlink(rel="stylesheet", href="./style/bloz-theme.css")\n\t\tlink(rel="stylesheet", href="https://bloz.org/assets/bloz-header.css?v=12")',
                 1,
             ),
             (
                 '+themeCss\n\t\tlink(rel="stylesheet", href="./style/bloz-theme.css")\n\t\tlink(rel="stylesheet", href="https://bloz.org/assets/bloz-header.css?v=2")',
-                '+themeCss\n\t\tlink(rel="stylesheet", href="./style/bloz-theme.css")\n\t\tlink(rel="stylesheet", href="https://bloz.org/assets/bloz-header.css?v=3")',
+                '+themeCss\n\t\tlink(rel="stylesheet", href="./style/bloz-theme.css")\n\t\tlink(rel="stylesheet", href="https://bloz.org/assets/bloz-header.css?v=12")',
                 1,
+            ),
+            (
+                '+themeCss\n\t\tlink(rel="stylesheet", href="./style/bloz-theme.css")\n\t\tlink(rel="stylesheet", href="https://bloz.org/assets/bloz-header.css?v=3")',
+                '+themeCss\n\t\tlink(rel="stylesheet", href="./style/bloz-theme.css")\n\t\tlink(rel="stylesheet", href="https://bloz.org/assets/bloz-header.css?v=12")',
+                1,
+            ),
+            (
+                'script(src="https://bloz.org/assets/bloz-header.js" defer)',
+                'script(src="https://bloz.org/assets/bloz-header.js?v=8" defer)',
+                0,
+            ),
+            (
+                'script(src="https://bloz.org/assets/bloz-header.js?v=7" defer)',
+                'script(src="https://bloz.org/assets/bloz-header.js?v=8" defer)',
+                0,
             ),
             (
                 'img(src="https://bloz.org/assets/bloz-mark.png", alt="", width="22", height="22")',
@@ -284,6 +401,31 @@ def theme_patches(base: str, cfg: dict) -> dict[str, list[tuple[str, str, int]]]
             (
                 "\t\tblock endOfBody",
                 f"{header_js}\n\n\t\tblock endOfBody",
+                1,
+            ),
+            (
+                'form.form-inline.d-lg-none.w-100.mt-2.mt-md-0(method="post", action="./search")',
+                'form.form-inline.d-lg-none.bz-mobile-search(method="post", action="./search")',
+                0,
+            ),
+            (
+                'link(rel="stylesheet", href="https://bloz.org/assets/bloz-header.css?v=9")',
+                'link(rel="stylesheet", href="https://bloz.org/assets/bloz-header.css?v=12")',
+                0,
+            ),
+            (
+                'link(rel="stylesheet", href="https://bloz.org/assets/bloz-header.css?v=11")',
+                'link(rel="stylesheet", href="https://bloz.org/assets/bloz-header.css?v=12")',
+                0,
+            ),
+            (
+                NAVBAR_TOGGLER_BLOCK,
+                mobile_search_row_pug(),
+                1,
+            ),
+            (
+                MOBILE_SEARCH_FORM_BLOCK,
+                "",
                 1,
             ),
         ],
