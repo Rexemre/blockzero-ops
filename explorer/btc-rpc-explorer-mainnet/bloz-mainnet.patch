@@ -7436,6 +7436,20 @@ index e9ee6d2..1128f91 100644
 -}
 +}
 \ No newline at end of file
+diff --git a/views/includes/blocks-list.pug b/views/includes/blocks-list.pug
+index 66dbe63..f6104d5 100644
+--- a/views/includes/blocks-list.pug
++++ b/views/includes/blocks-list.pug
+@@ -202,7 +202,8 @@
+ 								- var currencyValueDecimals = 3;
+ 
+ 								if (userSettings.displayCurrency == "btc")
+-									+valueDisplaySpecial(block.totalFees, 4)
++									//- BLOZ: kleine Gebuehren (unter 0.0001) sonst als 0.0000 gerundet
++									+valueDisplaySpecial(block.totalFees, (new Decimal(block.totalFees).lessThan(0.0001) ? 8 : 4))
+ 
+ 								else
+ 									+valueDisplay(block.totalFees)
 diff --git a/views/includes/shared-mixins.pug b/views/includes/shared-mixins.pug
 index 4e57cc7..8c67591 100644
 --- a/views/includes/shared-mixins.pug
@@ -7538,7 +7552,7 @@ index 2b17d8f..0eaafc3 100644
  		meta(name="msapplication-config", content="./img/network-mainnet/browserconfig.xml")
  		meta(name="theme-color" content="#022e70")
 diff --git a/views/layout.pug b/views/layout.pug
-index 5743588..15eeca0 100644
+index 5743588..8b30b53 100644
 --- a/views/layout.pug
 +++ b/views/layout.pug
 @@ -9,26 +9,34 @@ html(lang="en")
@@ -7560,7 +7574,7 @@ index 5743588..15eeca0 100644
 +		style.
 +			nav.bz-suite{display:flex;align-items:center;flex-wrap:wrap;gap:6px 18px;padding:10px 24px;background:#05070a;border-bottom:1px solid rgba(111,231,255,.16);font-family:sans-serif}nav.bz-suite a{color:#bfc7d5;text-decoration:none}nav.bz-suite .bz-suite-brand img{height:40px;width:auto;vertical-align:middle}nav.bz-suite .bz-suite-links{display:flex;flex-wrap:wrap;gap:6px 18px}nav.bz-suite a.active{color:#2ee6a8}nav.bz-suite .bz-suite-live{display:none}
 +		link(rel="stylesheet", href="./style/bloz-theme.css")
-+		link(rel="stylesheet", href="https://bloz.org/assets/bloz-header.css?v=21")
++		link(rel="stylesheet", href="https://bloz.org/assets/bloz-header.css?v=27")
  		
  
  		link(id="canonical" rel="canonical" href="https://bitcoinexplorer.org")
@@ -7689,7 +7703,7 @@ index 5743588..15eeca0 100644
  				gtag('config', '#{config.credentials.googleAnalyticsTrackingId}');
  
  		
-+		script(src="https://bloz.org/assets/bloz-header.js?v=21" defer)
++		script(src="https://bloz.org/assets/bloz-header.js?v=27" defer)
 +		//- «Ask AI»-Widget (Task 0e29), siehe /opt/sites/blockzero-mainnet-explorer/BLOZ-HEADER.md
 +		link(rel="stylesheet", href="https://bloz.org/assets/bloz-ai.css?v=2")
 +		script(src="https://bloz.org/assets/bloz-ai.js?v=4" data-page="explorer" defer)
